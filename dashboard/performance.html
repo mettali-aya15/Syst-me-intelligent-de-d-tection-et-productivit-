@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Comparaison Performance</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>Comparaison Performance</header>
+<div class="container">
+
+    <div class="card">
+        <h2>Efficacité Opérateurs</h2>
+        <canvas id="operatorChart" width="400" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>Production Machines</h2>
+        <canvas id="machineOutputChart" width="400" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>Top 5 Opérateurs</h2>
+        <table>
+            <tr><th>Nom</th><th>Unités Produites</th><th>Efficacité</th></tr>
+            <tr><td>Operator A</td><td>130</td><td>82%</td></tr>
+            <tr><td>Operator B</td><td>152</td><td>85%</td></tr>
+            <tr><td>Operator C</td><td>132</td><td>82%</td></tr>
+        </table>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctxOp = document.getElementById('operatorChart').getContext('2d');
+const operatorChart = new Chart(ctxOp, {
+    type: 'bar',
+    data: {
+        labels: ['A','B','C','D'],
+        datasets: [{label:'Efficacité %', data:[82,85,82,82], backgroundColor:'#2ecc71'}]
+    }
+});
+
+const ctxMo = document.getElementById('machineOutputChart').getContext('2d');
+const machineChart = new Chart(ctxMo, {
+    type: 'bar',
+    data: {
+        labels: ['Machine A1','Machine B1','Machine C1'],
+        datasets: [{label:'Unités Produites', data:[126,110,95], backgroundColor:'#3498db'}]
+    }
+});
+</script>
+</body>
+</html>

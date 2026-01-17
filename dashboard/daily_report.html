@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Rapports Journaliers</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>Rapports Journaliers</header>
+<div class="container">
+
+    <div class="card">
+        <h2>Productivité Machines (Exemple)</h2>
+        <canvas id="machineChart" width="400" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>Activité Employés</h2>
+        <canvas id="employeeChart" width="400" height="150"></canvas>
+    </div>
+
+    <div class="card">
+        <h2>Détails par Machine / Employé</h2>
+        <table>
+            <tr><th>Nom</th><th>Heures Travail</th><th>Heures Inactives</th><th>Unités Produites</th><th>Efficacité</th></tr>
+            <tr><td>Operator A</td><td>6h 00m</td><td>1h 10m</td><td>112</td><td>84%</td></tr>
+            <tr><td>Machine A1</td><td>14h 30m</td><td>1h 20m</td><td>269</td><td>84%</td></tr>
+        </table>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Graphiques fictifs
+const ctxMachine = document.getElementById('machineChart').getContext('2d');
+const machineChart = new Chart(ctxMachine, {
+    type: 'bar',
+    data: {
+        labels: ['A1', 'A2', 'B1', 'B2', 'C1'],
+        datasets: [{
+            label: 'Unités Produites',
+            data: [269, 200, 150, 120, 100],
+            backgroundColor: '#3498db'
+        }]
+    },
+});
+
+const ctxEmployee = document.getElementById('employeeChart').getContext('2d');
+const employeeChart = new Chart(ctxEmployee, {
+    type: 'bar',
+    data: {
+        labels: ['Operator A', 'Operator B', 'Operator C'],
+        datasets: [{
+            label: 'Heures Actives',
+            data: [6, 7, 5],
+            backgroundColor: '#2ecc71'
+        },{
+            label: 'Heures Inactives',
+            data: [1.2, 0.8, 1.5],
+            backgroundColor: '#f1c40f'
+        }]
+    },
+    options: { stacked: true }
+});
+</script>
+</body>
+</html>
