@@ -1,0 +1,255 @@
+  
+<div class="production-container"> <a routerLink="/app-admin-dashboard" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        Retour 
+    </a>
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>📊 Suivi de Production</h1>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div class="loader" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Chargement des données de production...</p>
+  </div>
+
+  <div *ngIf="!loading">
+    <!-- KPIs Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-content">
+          <p class="kpi-label">Production Totale</p>
+          <h3 class="kpi-value">{{ stats.totalProduction | number }}</h3>
+          <p class="kpi-unit">unités</p>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">⚡</div>
+        <div class="kpi-content">
+          <p class="kpi-label">Efficacité Moyenne</p>
+          <h3 class="kpi-value">{{ stats.averageEfficiency | number:'1.1-1' }}%</h3>
+          <div class="progress-mini">
+            <div 
+              class="progress-fill" 
+              [style.width.%]="stats.averageEfficiency"
+              [style.background-color]="getEfficiencyColor(stats.averageEfficiency)"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-content">
+          <p class="kpi-label">Total Défauts</p>
+          <h3 class="kpi-value">{{ stats.totalDefects }}</h3>
+          <p class="kpi-unit">pièces défectueuses</p>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">⏸️</div>
+        <div class="kpi-content">
+          <p class="kpi-label">Temps d'Arrêt</p>
+          <h3 class="kpi-value">{{ stats.totalDowntime }}</h3>
+          <p class="kpi-unit">minutes</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="charts-grid">
+      <!-- Production par shift -->
+      <div class="chart-card">
+        <h3 class="chart-title">Production par Équipe</h3>
+        <div class="bar-chart">
+          <div 
+            *ngFor="let item of stats.productionByShift" 
+            class="bar-item"
+          >
+            <div class="bar-wrapper">
+              <div 
+                class="bar" 
+                [style.height.%]="getShiftPercentage(item.quantity)"
+                [title]="item.quantity + ' unités'"
+              >
+                <span class="bar-value">{{ item.quantity }}</span>
+              </div>
+            </div>
+            <div class="bar-label">{{ item.shift }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Production par machine -->
+      <div class="chart-card">
+        <h3 class="chart-title">Production par Machine</h3>
+        <div class="horizontal-bars">
+          <div 
+            *ngFor="let item of stats.productionByMachine" 
+            class="h-bar-item"
+          >
+            <div class="h-bar-label">{{ item.machine }}</div>
+            <div class="h-bar-wrapper">
+              <div 
+                class="h-bar" 
+                [style.width.%]="getMachinePercentage(item.quantity)"
+              >
+                <span class="h-bar-value">{{ item.quantity }} unités</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tendance d'efficacité -->
+      <div class="chart-card full-width">
+        <h3 class="chart-title">Tendance d'Efficacité</h3>
+        <div class="line-chart">
+          <div 
+            *ngFor="let point of stats.efficiencyTrend" 
+            class="line-point"
+          >
+            <div class="line-bar-wrapper">
+              <div 
+                class="line-bar" 
+                [style.height.%]="getEfficiencyHeight(point.efficiency)"
+                [style.background-color]="getEfficiencyColor(point.efficiency)"
+              >
+                <span class="line-value">{{ point.efficiency | number:'1.1-1' }}%</span>
+              </div>
+            </div>
+            <div class="line-label">{{ point.date | date:'dd/MM' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-section">
+      <h3>🔍 Filtres</h3>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label>Date</label>
+          <input 
+            type="date" 
+            [(ngModel)]="filterDate"
+            (change)="applyFilters()"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label>Machine</label>
+          <select 
+            [(ngModel)]="filterMachine"
+            (change)="applyFilters()"
+          >
+            <option value="">Toutes les machines</option>
+            <option *ngFor="let machine of machines" [value]="machine.id">
+              {{ machine.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Équipe</label>
+          <select 
+            [(ngModel)]="filterShift"
+            (change)="applyFilters()"
+          >
+            <option value="">Toutes les équipes</option>
+            <option value="Matin">Matin</option>
+            <option value="Après-midi">Après-midi</option>
+            <option value="Soir">Soir</option>
+            <option value="Nuit">Nuit</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn-reset" (click)="resetFilters()">
+            🔄 Réinitialiser
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table des productions -->
+    <div class="productions-table-card">
+      <h3>📋 Détails de Production</h3>
+      <div class="table-wrapper">
+        <table class="productions-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Équipe</th>
+              <th>Machine</th>
+              <th>Produit</th>
+              <th>Objectif</th>
+              <th>Réalisé</th>
+              <th>Efficacité</th>
+              <th>Défauts</th>
+              <th>Arrêt</th>
+              <th>Opérateur</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let prod of filteredProductions$ | async">
+              <td>{{ prod.date | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <span class="shift-badge">{{ prod.shift }}</span>
+              </td>
+              <td>{{ getMachineName(prod.machineId) }}</td>
+              <td class="product-name">{{ prod.product }}</td>
+              <td>{{ prod.targetQuantity }}</td>
+              <td>
+                <strong>{{ prod.actualQuantity }}</strong>
+              </td>
+              <td>
+                <div class="efficiency-cell">
+                  <span 
+                    class="efficiency-badge"
+                    [ngClass]="getEfficiencyClass(prod.efficiency)"
+                  >
+                    {{ prod.efficiency | number:'1.1-1' }}%
+                  </span>
+                  <div class="efficiency-bar-mini">
+                    <div 
+                      class="efficiency-fill"
+                      [style.width.%]="prod.efficiency"
+                      [style.background-color]="getEfficiencyColor(prod.efficiency)"
+                    ></div>
+                  </div>
+                </div>
+              </td>
+              <td class="defects-cell">
+                <span class="defects-value" [class.has-defects]="prod.defects > 0">
+                  {{ prod.defects }}
+                </span>
+              </td>
+              <td>{{ prod.downtime }} min</td>
+              <td>{{ getOperatorName(prod.operatorId) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Message si aucune production -->
+    <div 
+      class="empty-state" 
+      *ngIf="(filteredProductions$ | async)?.length === 0"
+    >
+      <div class="empty-icon">📊</div>
+      <h3>Aucune production trouvée</h3>
+      <p>Aucune donnée de production ne correspond aux critères sélectionnés</p>
+      <button class="btn-reset" (click)="resetFilters()">
+        Réinitialiser les filtres
+      </button>
+    </div>
+  </div>
+</div>

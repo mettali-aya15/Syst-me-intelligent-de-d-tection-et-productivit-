@@ -1,0 +1,33 @@
+<div class="access-denied-container">
+    <div class="access-denied-content">
+        <div class="error-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        
+        <h1>Accès refusé</h1>
+        <p class="error-code">Error 403</p>
+        
+        <p class="error-message">
+            Vous n'avez pas les autorisations nécessaires pour accéder à cette page.
+        </p>
+
+        @if (currentUser) {
+        <div class="user-info">
+            <p>Connecté en tant que: <strong>{{ currentUser.email }}</strong></p>
+            <p>Rôle: <strong>{{ currentUser.role }}</strong></p>
+        </div>
+        }
+
+        <div class="action-buttons">
+            <button class="btn-secondary" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+                Page précédente
+            </button>
+        </div>
+
+        <div class="help-text">
+            <p>Si vous pensez qu'il s'agit d'une erreur, veuillez contacter l'administrateur.</p>
+            <a routerLink="/contact">Contactez-nous</a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,17 @@
+   <a routerLink="/app-admin-dashboard" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        Retour 
+    </a>
+<div  class="rapports">
+  <h2>Rapports Usine</h2>
+
+  <button (click)="exportPDF()" [disabled]="loading">
+    📄 Export PDF
+  </button>
+
+  <button (click)="exportExcel()" [disabled]="loading">
+    📊 Export Excel
+  </button>
+@if(loading){
+  <p >⏳ Génération du rapport...</p>}
+</div>

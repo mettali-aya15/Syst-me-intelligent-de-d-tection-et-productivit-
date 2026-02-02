@@ -1,0 +1,265 @@
+<div class="shape shape1"></div>
+<div class="shape shape2"></div>
+
+<div class="register-container">
+    <a routerLink="/" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        Retour à l'accueil
+    </a>
+
+    <div class="logo-section">
+        <div class="logo">
+            Smart<span>Factory</span>
+        </div>
+        <p class="logo-subtitle">Système intelligent de suivi de productivité</p>
+    </div>
+
+    <div class="register-card">
+        <div class="register-header">
+            <h2>Créer un compte</h2>
+            
+        </div>
+
+        @if (registerError) {
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ errorMessage }}</span>
+        </div>
+        }
+
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">Prénom <span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="firstName" 
+                            formControlName="firstName"
+                            [class.invalid]="isFieldInvalid('firstName')"
+                            placeholder="Jean">
+                        <i class="fas fa-user input-icon"></i>
+                    </div>
+                    @if (isFieldInvalid('firstName')) {
+                    <div class="error-text">
+                        {{ getFieldError('firstName') }}
+                    </div>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label for="lastName">Nom <span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="lastName" 
+                            formControlName="lastName"
+                            [class.invalid]="isFieldInvalid('lastName')"
+                            placeholder="Dupont">
+                        <i class="fas fa-user input-icon"></i>
+                    </div>
+                    @if (isFieldInvalid('lastName')) {
+                    <div class="error-text">
+                        {{ getFieldError('lastName') }}
+                    </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email <span class="required">*</span></label>
+                <div class="input-wrapper">
+                    <input 
+                        type="email" 
+                        id="email" 
+                        formControlName="email"
+                        [class.invalid]="isFieldInvalid('email')"
+                        placeholder="votre@email.com">
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                @if (isFieldInvalid('email')) {
+                <div class="error-text">
+                    {{ getFieldError('email') }}
+                </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="company">Entreprise <span class="required">*</span></label>
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="company" 
+                        formControlName="company"
+                        [class.invalid]="isFieldInvalid('company')"
+                        placeholder="Nom de votre entreprise">
+                    <i class="fas fa-building input-icon"></i>
+                </div>
+                @if (isFieldInvalid('company')) {
+                <div class="error-text">
+                    {{ getFieldError('company') }}
+                </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Téléphone</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        formControlName="phone"
+                        [class.invalid]="isFieldInvalid('phone')"
+                        placeholder="+216 XX XXX XXX">
+                    <i class="fas fa-phone input-icon"></i>
+                </div>
+                @if (isFieldInvalid('phone')) {
+                <div class="error-text">
+                    {{ getFieldError('phone') }}
+                </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="industry">Secteur d'activité <span class="required">*</span></label>
+                <div class="input-wrapper">
+                    <select 
+                        id="industry" 
+                        formControlName="industry"
+                        [class.invalid]="isFieldInvalid('industry')">
+                        @for (option of industryOptions; track option.value) {
+                        <option [value]="option.value">{{ option.label }}</option>
+                        }
+                    </select>
+                    <i class="fas fa-industry input-icon"></i>
+                </div>
+                @if (isFieldInvalid('industry')) {
+                <div class="error-text">
+                    {{ getFieldError('industry') }}
+                </div>
+                }
+            </div>
+<div class="form-group">
+    <label for="role">Rôle <span class="required">*</span></label>
+    <div class="input-wrapper">
+        <select 
+            id="role" 
+            formControlName="role"
+            [class.invalid]="isFieldInvalid('role')">
+            @for (roleOption of roleOptions; track roleOption.value) {
+            <option [value]="roleOption.value">{{ roleOption.label }}</option>
+            }
+        </select>
+        <i class="fas fa-user-shield input-icon"></i>
+    </div>
+    @if (isFieldInvalid('role')) {
+    <div class="error-text">
+        {{ getFieldError('role') }}
+    </div>
+    }
+</div>
+            <div class="form-group">
+                <label for="password">Mot de passe <span class="required">*</span></label>
+                <div class="input-wrapper">
+                    <input 
+                        [type]="showPassword ? 'text' : 'password'" 
+                        id="password" 
+                        formControlName="password"
+                        [class.invalid]="isFieldInvalid('password')"
+                        placeholder="••••••••">
+                    <i class="fas fa-lock input-icon"></i>
+                    <i 
+                        [class]="showPassword ? 'fas fa-eye-slash password-toggle' : 'fas fa-eye password-toggle'"
+                        (click)="togglePasswordVisibility()"></i>
+                </div>
+                @if (showPasswordStrength) {
+                <div class="password-strength show">
+                    <div class="strength-bar">
+                        <div class="strength-fill" [class]="passwordStrength"></div>
+                    </div>
+                    <div 
+                        class="strength-text" 
+                        [style.color]="passwordStrength === 'weak' ? '#ef4444' : passwordStrength === 'medium' ? '#f59e0b' : '#10b981'">
+                        {{ passwordStrengthText }}
+                    </div>
+                </div>
+                }
+                @if (isFieldInvalid('password')) {
+                <div class="error-text">
+                    {{ getFieldError('password') }}
+                </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirmer le mot de passe <span class="required">*</span></label>
+                <div class="input-wrapper">
+                    <input 
+                        [type]="showConfirmPassword ? 'text' : 'password'" 
+                        id="confirmPassword" 
+                        formControlName="confirmPassword"
+                        [class.invalid]="isFieldInvalid('confirmPassword') || hasPasswordMismatch()"
+                        placeholder="••••••••">
+                    <i class="fas fa-lock input-icon"></i>
+                    <i 
+                        [class]="showConfirmPassword ? 'fas fa-eye-slash password-toggle' : 'fas fa-eye password-toggle'"
+                        (click)="toggleConfirmPasswordVisibility()"></i>
+                </div>
+                @if (hasPasswordMismatch()) {
+                <div class="error-text">
+                    Les mots de passe ne correspondent pas
+                </div>
+                }
+                @if (isFieldInvalid('confirmPassword') && !hasPasswordMismatch()) {
+                <div class="error-text">
+                    {{ getFieldError('confirmPassword') }}
+                </div>
+                }
+            </div>
+
+            <div class="terms-group">
+                <input 
+                    type="checkbox" 
+                    id="terms" 
+                    formControlName="terms">
+                <label for="terms">
+                    J'accepte les <a href="#" (click)="$event.preventDefault()">conditions d'utilisation</a> et la <a href="#" (click)="$event.preventDefault()">politique de confidentialité</a> de SmartFactory
+                </label>
+            </div>
+            @if (isFieldInvalid('terms')) {
+            <div class="error-text" style="margin-top: -15px; margin-bottom: 15px;">
+                Vous devez accepter les conditions d'utilisation
+            </div>
+            }
+
+            <button 
+                type="submit" 
+                class="submit-btn"
+                [disabled]="isSubmitting"
+                [class.success]="registerSuccess">
+                @if (!isSubmitting && !registerSuccess) {
+                <span>
+                    <i class="fas fa-user-plus" style="margin-right: 8px;"></i>
+                    Créer mon compte
+                </span>
+                }
+                @if (isSubmitting) {
+                <span>
+                    <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
+                    Création du compte...
+                </span>
+                }
+                @if (registerSuccess) {
+                <span>
+                    <i class="fas fa-check" style="margin-right: 8px;"></i>
+                    Compte créé avec succès !
+                </span>
+                }
+            </button>
+        </form>
+
+        <div class="login-link">
+            Vous avez déjà un compte ? <a routerLink="/login">Se connecter</a>
+        </div>
+    </div>
+</div>

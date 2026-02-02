@@ -1,0 +1,17 @@
+<!--Admin Dashboard -->
+<nav class="navbar">
+  <div class="logo">
+    <a routerLink="/">Smart </a>
+  </div>
+
+ <a routerLink="/machines">Machines</a>
+  <a routerLink="/emp-list">Employés</a>
+  <a routerLink="/production">Production</a>
+@if (isAdmin ){
+ <a routerLink="/kpi">KPI</a>
+<a routerLink="/users">Gestion Utilisateurs</a>}
+   @if (isAdmin || isManager) {
+ <a routerLink="/rapport">Rapports</a> }
+  <a routerLink="/notifications"  [class.has-notifications]="hasUnreadNotifications">🔔</a>
+  <button (click)="logout()">Logout</button>
+</nav>

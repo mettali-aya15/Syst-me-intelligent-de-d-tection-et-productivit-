@@ -1,0 +1,174 @@
+
+
+/* Titre moderne */
+.rapports h2 {
+  color: #f8fafc;
+  font-size: 1.6rem;
+  margin-bottom: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  letter-spacing: -0.02em;
+}
+
+.rapports h2 i {
+  color: #6366f1;
+}
+
+.rapports h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.2), transparent);
+  margin-left: 20px;
+}
+
+/* Boutons de génération */
+.rapports button {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  font-family: inherit;
+}
+
+.rapports button:hover:not(:disabled) {
+  background: #4f46e5;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+}
+
+.rapports button:active {
+  transform: translateY(-1px);
+}
+
+/* État désactivé (Génération en cours) */
+.rapports button:disabled {
+  background: #334155;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+/* Message d'état (Le <p> d'attente) */
+.rapports p {
+  background: rgba(245, 158, 11, 0.1); /* Ambre très léger */
+  color: #fbbf24;
+  padding: 16px 24px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 15px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  animation: glassPulse 2s infinite ease-in-out;
+}
+
+/* Point lumineux clignotant */
+.rapports p::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: #fbbf24;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #fbbf24;
+  animation: blink 1.5s infinite;
+}
+
+/* Animations */
+@keyframes glassPulse {
+  0%, 100% { background: rgba(245, 158, 11, 0.1); }
+  50% { background: rgba(245, 158, 11, 0.2); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/**************************************/
+/********* BUTTON RETOUR DASHBOARD ****/
+/**************************************/
+
+.back-btn i {
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.back-btn:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: #6366f1;
+  color: #6366f1;
+  transform: translateX(-5px);
+}
+
+.back-btn:hover i {
+  transform: translateX(-3px);
+}
+/* Positionnement du bouton Retour */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  
+  /* Ajustement de la position */
+  margin-top: 30px; 
+  margin-left: 30px;
+  
+  padding: 12px 20px;
+  background: rgba(30, 41, 59, 0.5);
+  color: #f8fafc;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: rgba(30, 41, 59, 0.8);
+  transform: translateX(-5px);
+  color: #6366f1;
+}
+
+/* Positionnement de la carte de rapports */
+.rapports {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 850px;
+  
+  /* On augmente la marge du haut ici (12vh = 12% de la hauteur écran) */
+  margin: 12vh auto; 
+  
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+/* Accent top bar */
+.rapports::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    
+   
+
+<div class="shape shape1"></div>
+<div class="shape shape2"></div>
+
+<div class="login-container">
+    <a routerLink="/" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        Retour à l'accueil
+    </a>
+
+    <div class="logo-section">
+        <div class="logo">
+            Smart<span>Factory</span>
+        </div>
+        <p class="logo-subtitle">Système intelligent de suivi de productivité</p>
+    </div>
+
+    <div class="login-card">
+        <div class="login-header">
+            <h2>Bienvenue !</h2>
+            <p>Connectez-vous à votre compte</p>
+        </div>
+
+        @if (loginError) {
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ errorMessage }}</span>
+        </div>
+        }
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="email" 
+                        id="email" 
+                        formControlName="email"
+                        [class.invalid]="isFieldInvalid('email')"
+                        placeholder="votre@email.com">
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                @if (isFieldInvalid('email')) {
+                <div class="error-text">
+                    {{ getFieldError('email') }}
+                </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <div class="input-wrapper">
+                    <input 
+                        [type]="showPassword ? 'text' : 'password'" 
+                        id="password" 
+                        formControlName="password"
+                        [class.invalid]="isFieldInvalid('password')"
+                        placeholder="••••••••">
+                    <i class="fas fa-lock input-icon"></i>
+                    <i 
+                        [class]="showPassword ? 'fas fa-eye-slash password-toggle' : 'fas fa-eye password-toggle'"
+                        (click)="togglePasswordVisibility()"></i>
+                </div>
+                @if (isFieldInvalid('password')) {
+                <div class="error-text">
+                    {{ getFieldError('password') }}
+                </div>
+                }
+            </div>
+
+            <div class="form-options">
+                <div class="remember-me">
+                    <input 
+                        type="checkbox" 
+                        id="remember"
+                        formControlName="rememberMe">
+                    <label for="remember">Se souvenir de moi</label>
+                </div>
+                
+            </div>
+
+            <button 
+                type="submit" 
+                class="submit-btn"
+                [disabled]="isSubmitting"
+                [class.success]="loginSuccess">
+                @if (!isSubmitting && !loginSuccess) {
+                <span>
+                    <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>
+                    Se connecter
+                </span>
+                }
+                @if (isSubmitting) {
+                <span>
+                    <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
+                    Connexion en cours...
+                </span>
+                }
+                @if (loginSuccess) {
+                <span>
+                    <i class="fas fa-check" style="margin-right: 8px;"></i>
+                    Connexion réussie !
+                </span>
+                } 
+            </button>
+        </form>
+
+
+  
+
+        <div class="register-link">
+            Vous n'avez pas de compte ? <a routerLink="/register">Créer un compte</a>
+        </div>
+    </div>
+</div></body>
+</html> 

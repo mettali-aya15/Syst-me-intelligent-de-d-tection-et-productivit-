@@ -1,0 +1,280 @@
+/* ===================================
+   SMARTFACTORY NAVBAR - CSS
+   Navigation moderne et élégante
+   =================================== */
+
+/* Variables pour cohérence avec le site */
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #1e40af;
+    --accent-color: #f59e0b;
+    --dark-bg: #0f172a;
+    --darker-bg: #020617;
+    --light-text: #f1f5f9;
+    --gray-text: #94a3b8;
+    --card-bg: #1e293b;
+    --border-color: #334155;
+}
+
+/* Navbar principale */
+.navbar {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Logo */
+.logo {
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.logo a {
+    text-decoration: none;
+    color: var(--light-text);
+    transition: all 0.3s ease;
+    display: inline-block;
+    position: relative;
+}
+
+.logo a::after {
+    content: 'Factory';
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-left: -7px;
+}
+
+.logo a:hover {
+    transform: scale(1.05);
+}
+
+/* Navigation Links */
+.links {
+    display: flex;
+    list-style: none;
+    gap: 2.5rem;
+    margin: 0;
+    padding: 0;
+}
+
+.links li {
+    position: relative;
+}
+
+.links a {
+    color: var(--gray-text);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    padding: 0.5rem 0;
+    position: relative;
+}
+
+.links a::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.3s ease;
+}
+
+.links a:hover {
+    color: var(--light-text);
+}
+
+.links a:hover::before {
+    width: 100%;
+}
+
+/* Active link style */
+.links a.active {
+    color: var(--primary-color);
+}
+
+.links a.active::before {
+    width: 100%;
+}
+
+/* Actions (Login/Register buttons) */
+.actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.login-btn {
+    padding: 0.6rem 1.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+/* Login button style */
+.actions a:first-child {
+    color: var(--light-text);
+    background: transparent;
+    border: 2px solid var(--border-color);
+}
+
+.actions a:first-child:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Register button style */
+.actions a:last-child {
+    color: white;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.actions a:last-child::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+    transition: left 0.3s ease;
+    z-index: -1;
+}
+
+.actions a:last-child:hover::before {
+    left: 0;
+}
+
+.actions a:last-child:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.4);
+}
+
+/* Menu burger pour mobile */
+.menu-toggle {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    gap: 5px;
+}
+
+.menu-toggle span {
+    width: 25px;
+    height: 3px;
+    background: var(--light-text);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 1rem 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .menu-toggle {
+        display: flex;
+        order: 3;
+    }
+
+    .links {
+        width: 100%;
+        flex-direction: column;
+        gap: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        order: 4;
+    }
+
+    .navbar.menu-open .links {
+        max-height: 300px;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .links li {
+        width: 100%;
+    }
+
+    .links a {
+        display: block;
+        padding: 0.8rem 0;
+    }
+
+    .actions {
+        order: 2;
+        gap: 0.5rem;
+    }
+
+    .login-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    /* Animation du menu burger */
+    .navbar.menu-open .menu-toggle span:nth-child(1) {
+        transform: rotate(45deg) translate(8px, 8px);
+    }
+
+    .navbar.menu-open .menu-toggle span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .navbar.menu-open .menu-toggle span:nth-child(3) {
+        transform: rotate(-45deg) translate(7px, -7px);
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 1rem;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+    }
+
+    .actions {
+        gap: 0.4rem;
+    }
+
+    .login-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Effet de scroll - navbar devient plus compacte */
+.navbar.scrolled {
+    padding: 0.7rem 2rem;
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+    .navbar.scrolled {
+        padding: 0.7rem 1.5rem;
+    }
+}

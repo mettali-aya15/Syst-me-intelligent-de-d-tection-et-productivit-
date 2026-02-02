@@ -1,0 +1,377 @@
+{
+  "users": [
+    {
+      "id": "admin_001",
+      "email": "admin@smartfactory.tn",
+      "password": "admin123",
+      "firstName": "Admin",
+      "lastName": "SmartFactory",
+      "role": "admin",
+      "company": "SmartFactory HQ",
+      "phone": "+216 70 123 456",
+      "department": "IT",
+      "avatar": "https://ui-avatars.com/api/?name=Admin+SmartFactory&background=2563eb&color=fff",
+      "loginDate": "2025-01-11T10:30:00.000Z",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "manager_001",
+      "email": "manager@smartfactory.tn",
+      "password": "manager123",
+      "firstName": "Manager",
+      "lastName": "Production",
+      "role": "manager",
+      "company": "Factory A",
+      "phone": "+216 70 234 567",
+      "department": "Production",
+      "avatar": "https://ui-avatars.com/api/?name=Manager+Production&background=f59e0b&color=fff",
+      "loginDate": "2025-01-11T09:15:00.000Z",
+      "createdAt": "2024-02-01T00:00:00.000Z"
+    },
+    {
+      "id": "operator_001",
+      "email": "operator@smartfactory.tn",
+      "password": "operator123",
+      "firstName": "Operateur",
+      "lastName": "Machine",
+      "role": "operator",
+      "company": "Factory A",
+      "phone": "+216 70 345 678",
+      "department": "Atelier A",
+      "avatar": "https://ui-avatars.com/api/?name=Operateur+Machine&background=10b981&color=fff",
+      "loginDate": "2025-01-11T08:00:00.000Z",
+      "createdAt": "2024-03-01T00:00:00.000Z"
+    },
+    {
+      "id": "user_1768342452073",
+      "email": "feriel.operator@smartfactory.com",
+      "password": "feriel123456789",
+      "firstName": "Feriel",
+      "lastName": "hamrouni",
+      "role": "operator",
+      "company": "Tunisia Tech Solutions",
+      "phone": "+21640275288",
+      "department": "pharmaceutique",
+      "avatar": "https://ui-avatars.com/api/?name=Feriel+hamrouni&background=2563eb&color=fff",
+      "loginDate": "2026-01-13T22:14:12.073Z",
+      "createdAt": "2026-01-13T22:14:12.073Z"
+    },
+    {
+      "firstName": "ALA",
+      "lastName": "Hamdi",
+      "email": "alahamdi@gmail.com",
+      "company": "sdfdsf",
+      "phone": "58469758",
+      "industry": "plastique",
+      "role": "operator",
+      "password": "ala12345",
+      "confirmPassword": "ala12345",
+      "terms": true,
+      "id": "20nbQCu",
+      "department": "maintenance"
+    },
+    {
+      "firstName": "alia",
+      "lastName": "ben ahmed",
+      "email": "aliabenahmed@smart.com",
+      "company": "SmartFN",
+      "phone": "44203569",
+      "industry": "electronique",
+      "role": "operator",
+      "password": "alia123456789",
+      "confirmPassword": "alia123456789",
+      "terms": true,
+      "id": "KJVCfJX"
+    }
+  ],
+  "employees": [
+    {
+      "id": "emp_001",
+      "firstName": "Ahmed",
+      "lastName": "Ben Ali",
+      "email": "ahmed.benali@factory.tn",
+      "phone": "+216 20 123 456",
+      "position": "Opérateur Machine",
+      "department": "Production",
+      "shift": "Matin",
+      "status": "inactive",
+      "hireDate": "2023-01-15",
+      "performance": 85,
+      "avatar": "https://ui-avatars.com/api/?name=Ahmed+Ben+Ali"
+    },
+    {
+      "id": "emp_002",
+      "firstName": "Assma",
+      "lastName": "Hammi",
+      "email": "fatma.jlassi@factory.tn",
+      "phone": "+216 20 234 485",
+      "position": "Contrôleuse Qualité",
+      "department": "Qualité",
+      "shift": "Matin",
+      "status": "stopped",
+      "hireDate": "2023-03-20",
+      "performance": 92,
+      "avatar": "https://ui-avatars.com/api/?name=Fatma+Jlassi"
+    },
+    {
+      "id": "emp_003",
+      "firstName": "Mohamed",
+      "lastName": "Trabelsi",
+      "email": "mohamed.trabelsi@factory.tn",
+      "phone": "+216 20 345 678",
+      "position": "Technicien Maintenance",
+      "department": "Maintenance",
+      "shift": "Soir",
+      "status": "active",
+      "hireDate": "2022-11-10",
+      "performance": 78,
+      "avatar": "https://ui-avatars.com/api/?name=Mohamed+Trabelsi"
+    },
+    {
+      "firstName": "alia",
+      "lastName": "ben ahmed",
+      "email": "aliabenahmed@smart.com",
+      "role": "operator",
+      "phone": "44203569",
+      "department": "SmartFN",
+      "position": "Opérateur de Ligne",
+      "status": "active",
+      "performance": 0,
+      "avatar": "https://i.pravatar.cc/150?u=aliabenahmed@smart.com",
+      "shift": "Matin",
+      "id": "cmF2HvU"
+    }
+  ],
+  "machines": [
+    {
+      "id": "mach_001",
+      "name": "Machine A1",
+      "type": "Extrudeuse",
+      "manufacturer": "TechnoPlast",
+      "model": "EXT-2000",
+      "serialNumber": "SN-2023-001",
+      "location": "Atelier A",
+      "status": "running",
+      "efficiency": 89,
+      "productionRate": 120,
+      "lastMaintenance": "2025-01-05",
+      "nextMaintenance": "2025-02-05",
+      "operatorId": "emp_001"
+    },
+    {
+      "id": "mach_003",
+      "name": "Machine C3",
+      "type": "Thermoformeuse",
+      "manufacturer": "FormTech",
+      "model": "TF-300",
+      "serialNumber": "SN-2023-003",
+      "location": "Atelier C",
+      "status": "running",
+      "efficiency": 92,
+      "productionRate": 150,
+      "lastMaintenance": "2025-01-03",
+      "nextMaintenance": "2025-02-03",
+      "operatorId": "emp_003"
+    },
+    {
+      "name": "Machine B4",
+      "type": "Souffleuse",
+      "manufacturer": "techno",
+      "model": "ext-2000",
+      "serialNumber": "sn-2023-t1",
+      "location": "atelier b",
+      "status": "running",
+      "efficiency": 60,
+      "productionRate": 47,
+      "lastMaintenance": "2026-01-18",
+      "nextMaintenance": "2026-02-05",
+      "operatorId": "emp_003",
+      "id": "mach_1768730836614"
+    },
+    {
+      "name": "Machine C5",
+      "type": "Presse",
+      "manufacturer": "technoPlast",
+      "model": "ext-122",
+      "serialNumber": "sn-2025",
+      "location": "Atelier B",
+      "status": "maintenance",
+      "efficiency": 89,
+      "productionRate": 120,
+      "lastMaintenance": "2026-02-01",
+      "nextMaintenance": "2026-03-14",
+      "operatorId": "cmF2HvU",
+      "id": "mach_1769989612126"
+    }
+  ],
+  "production": [
+    {
+      "id": "prod_001",
+      "date": "2025-01-11",
+      "shift": "Matin",
+      "machineId": "mach_001",
+      "product": "Sac plastique 50x70",
+      "targetQuantity": 1000,
+      "actualQuantity": 950,
+      "efficiency": 95,
+      "defects": 15,
+      "downtime": 30,
+      "operatorId": "emp_001"
+    },
+    {
+      "id": "prod_002",
+      "date": "2025-01-11",
+      "shift": "Matin",
+      "machineId": "mach_003",
+      "product": "Gobelet 250ml",
+      "targetQuantity": 2000,
+      "actualQuantity": 1850,
+      "efficiency": 92.5,
+      "defects": 25,
+      "downtime": 45,
+      "operatorId": "emp_003"
+    },
+    {
+      "id": "prod_003",
+      "date": "2025-01-10",
+      "shift": "Soir",
+      "machineId": "mach_001",
+      "product": "Sac plastique 40x60",
+      "targetQuantity": 1200,
+      "actualQuantity": 1100,
+      "efficiency": 91.6,
+      "defects": 20,
+      "downtime": 60,
+      "operatorId": "emp_001"
+    },
+    {
+      "date": "2026-02-01",
+      "shift": "Matin",
+      "machineId": "mach_1769989612126",
+      "product": "Produit par défaut",
+      "targetQuantity": 0,
+      "actualQuantity": 0,
+      "efficiency": 0,
+      "defects": 0,
+      "downtime": 0,
+      "operatorId": "emp_003",
+      "id": "prod_1769989612303"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif_001",
+      "type": "alert",
+      "title": "Machine B2 arrêtée",
+      "message": "La machine B2 s'est arrêtée de manière inattendue",
+      "userId": "manager_001",
+      "read": true,
+      "createdAt": "2025-01-11T10:15:00.000Z",
+      "priority": "high"
+    },
+    {
+      "id": "notif_002",
+      "type": "maintenance",
+      "title": "Maintenance programmée",
+      "message": "Maintenance de la machine C3 prévue le 03/02/2025",
+      "userId": "manager_001",
+      "read": false,
+      "createdAt": "2025-01-11T09:00:00.000Z",
+      "priority": "medium"
+    },
+    {
+      "id": "notif_003",
+      "type": "info",
+      "title": "Objectif atteint",
+      "message": "La production de la journée a dépassé l'objectif de 5%",
+      "userId": "manager_001",
+      "read": false,
+      "createdAt": "2025-01-10T18:00:00.000Z",
+      "priority": "low"
+    },
+    {
+      "id": "notif_004",
+      "type": "alert",
+      "title": "Machine AB arrêtée",
+      "message": "La machine ab s'est arrêtée de manière inattendue",
+      "userId": "manager_001",
+      "read": true,
+      "createdAt": "2025-01-11T10:15:00.000Z",
+      "priority": "high"
+    }
+  ],
+  "reports": [
+    {
+      "id": "report_001",
+      "title": "Rapport Journalier - 10/01/2025",
+      "type": "daily",
+      "date": "2025-01-10",
+      "generatedBy": "manager_001",
+      "status": "completed",
+      "summary": {
+        "totalProduction": 3050,
+        "efficiency": 92.3,
+        "defectRate": 1.8,
+        "downtime": 105
+      },
+      "createdAt": "2025-01-10T20:00:00.000Z"
+    },
+    {
+      "id": "report_002",
+      "title": "Rapport Hebdomadaire - Semaine 1",
+      "type": "weekly",
+      "date": "2025-01-07",
+      "generatedBy": "manager_001",
+      "status": "completed",
+      "summary": {
+        "totalProduction": 21000,
+        "efficiency": 89.5,
+        "defectRate": 2.1,
+        "downtime": 780
+      },
+      "createdAt": "2025-01-07T18:00:00.000Z"
+    }
+  ],
+  "kpis": [
+    {
+      "id": "kpi_001",
+      "name": "Production Totale",
+      "value": 3050,
+      "unit": "unités",
+      "target": 3000,
+      "trend": "up",
+      "changePercent": 1.6,
+      "period": "today"
+    },
+    {
+      "id": "kpi_002",
+      "name": "Efficacité Globale",
+      "value": 92.3,
+      "unit": "%",
+      "target": 90,
+      "trend": "up",
+      "changePercent": 2.5,
+      "period": "today"
+    },
+    {
+      "id": "kpi_003",
+      "name": "Taux de Défauts",
+      "value": 1.8,
+      "unit": "%",
+      "target": 2,
+      "trend": "down",
+      "changePercent": -10,
+      "period": "today"
+    },
+    {
+      "id": "kpi_004",
+      "name": "Temps d'Arrêt",
+      "value": 105,
+      "unit": "min",
+      "target": 120,
+      "trend": "down",
+      "changePercent": -12.5,
+      "period": "today"
+    }
+  ]
+}

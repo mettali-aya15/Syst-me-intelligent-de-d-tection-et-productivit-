@@ -1,0 +1,156 @@
+<div class="emp-container">
+  
+  <a routerLink="/app-admin-dashboard" class="back-btn">
+    <i class="fas fa-arrow-left"></i> Retour 
+  </a>
+
+  <!-- Header Section -->
+  <div class="emp-header">
+    <div class="emp-title-section">
+      <h2>Gestion des Employés</h2>
+      <p>Gérez votre équipe efficacement</p>
+    </div>
+    <div class="emp-counter">
+      <span class="emp-counter-label">Total :</span>
+      <span class="emp-counter-value">{{ filteredEmployees.length }}</span>
+    </div>
+  </div>
+
+  <!-- NOUVEAU : Barre de Filtres -->
+  <div class="filter-bar glass-card">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchQuery" 
+        (ngModelChange)="onSearch($event)" 
+        placeholder="Rechercher un employé, un poste ou un service...">
+    </div>
+    <div class="filter-controls">
+      <select [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange($event)" class="status-select">
+        <option value="all">Tous les statuts</option>
+        <option value="active">Actifs uniquement</option>
+        <option value="inactive">Inactifs uniquement</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Grille de cartes -->
+  @if (!isLoading) {
+    <div class="emp-grid">
+      @for (emp of filteredEmployees; track emp.id) {
+        <div class="emp-card glass-card">
+          <!-- ... (Contenu de votre carte existante) ... -->
+           <div class="emp-profile-section">
+            <div class="emp-avatar-wrapper">
+              <img [src]="emp.avatar || 'https://ui-avatars.com/api/?name='+emp.firstName+'+'+emp.lastName" class="emp-avatar">
+              <div class="emp-status-indicator" [ngClass]="emp.status"></div>
+            </div>
+            <div class="emp-info">
+              <h3 class="emp-name">{{ emp.firstName }} {{ emp.lastName }}</h3>
+              <p class="emp-position">{{ emp.position }}</p>
+              <div class="emp-department">{{ emp.department }}</div>
+            </div>
+            <span class="emp-status-badge" [ngClass]="emp.status">{{ emp.status }}</span>
+          </div>
+
+          <div class="emp-performance-section">
+            <div class="emp-performance-header">
+              <span>Performance</span>
+              <span class="emp-performance-value" [style.color]="emp.performance > 80 ? '#10b981' : '#f59e0b'">
+                {{ emp.performance }}%
+              </span>
+            </div>
+            <div class="emp-progress-bar">
+              <div class="emp-progress-fill" [style.width.%]="emp.performance" [style.background]="emp.performance > 80 ? '#10b981' : '#f59e0b'"></div>
+            </div>
+          </div>
+
+          <div class="emp-contact-section">
+            <div class="emp-contact-item"><i>📅</i> <span>{{ emp.shift }}</span></div>
+            <div class="emp-contact-item"><i>📞</i> <span>{{ emp.phone }}</span></div>
+            <div class="emp-contact-item email"><i>✉️</i> <a href="mailto:{{ emp.email }}">{{ emp.email }}</a></div>
+          </div>
+
+          <div class="emp-actions">
+            @if (canManage) {
+              <button class="emp-btn emp-btn-primary" (click)="editEmployee(emp)">
+                <i class="fas fa-edit"></i> Modifier
+              </button>
+            }
+            @if (isAdmin) {
+              <button class="emp-btn emp-btn-danger" (click)="deleteEmployee(emp)">
+                <i class="fas fa-trash"></i> Supprimer
+              </button>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="emp-empty-state">
+          <i class="fas fa-user-slash"></i>
+          <h3>Aucun employé trouvé</h3>
+          <p>Essayez de modifier vos critères de recherche.</p>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="emp-loading-state">
+      <i class="fas fa-circle-notch fa-spin"></i>
+      <p>Chargement des effectifs...</p>
+    </div>
+  }
+</div>
+
+<!-- Modal d'édition (Garder votre code modal existant avec style glass) -->
+
+<!-- Fin de emp-container -->
+
+<!-- AJOUT : MODAL D'ÉDITION -->
+@if (editingEmployee) {
+  <div class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Modifier {{ editingEmployee.firstName }} {{ editingEmployee.lastName }}</h3>
+        <button class="close-btn" (click)="cancelEdit()">×</button>
+      </div>
+
+      <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+        <div class="form-group">
+          <label>Prénom</label>
+          <input type="text" formControlName="firstName">
+        </div>
+
+        <div class="form-group">
+          <label>Nom</label>
+          <input type="text" formControlName="lastName">
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" formControlName="email">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Poste</label>
+            <input type="text" formControlName="position">
+          </div>
+          <div class="form-group">
+            <label>Département</label>
+            <input type="text" formControlName="department">
+          </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Téléphone</label>
+            <input type="text" formControlName="phone">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="emp-btn emp-btn-danger" (click)="cancelEdit()">Annuler</button>
+          <button type="submit" class="emp-btn emp-btn-primary" [disabled]="editForm.invalid">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
