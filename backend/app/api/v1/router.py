@@ -1,7 +1,7 @@
 from fastapi import WebSocket, APIRouter
 from app.services.realtime.websocket import ConnectionManager
 from .routes.cameras import router as cameras_router
-from .routes.machines import router as machines_router
+from .routes.workstation import router as workstations_router
 from .routes.employees import router as employees_router
 from .routes.events import router as events_router
 from .routes.kpis import router as kpis_router
@@ -12,7 +12,7 @@ from .routes.dashboard import router as dashboard_router
 api_router = APIRouter()
 
 api_router.include_router(cameras_router, prefix="/cameras", tags=["Cameras"])
-api_router.include_router(machines_router, prefix="/machines", tags=["Machines"])
+api_router.include_router(workstations_router, prefix="/workstations", tags=["Workstations"])
 api_router.include_router(employees_router, prefix="/employees", tags=["Employees"])
 api_router.include_router(events_router, prefix="/events", tags=["Events"])
 api_router.include_router(kpis_router, prefix="/kpis", tags=["KPIs"])

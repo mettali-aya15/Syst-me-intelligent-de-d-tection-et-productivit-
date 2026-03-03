@@ -4,33 +4,33 @@ Seed initial data for Factory AI system
 
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.models.factory import Factory
+from app.models.site import Site
 from app.models.camera import Camera
-from app.models.machine import Machine
+from app.models.workstation import Workstation
 
 def seed():
     db: Session = SessionLocal()
     print("⏳ Inserting seed data...")
 
-    # Factory
-    factory = Factory(
-        name="Demo Factory",
+    # Site
+    site = Site(
+        name="Demo Site",
         location="Tunis"
     )
-    db.add(factory)
+    db.add(site)
     db.commit()
-    db.refresh(factory)
+    db.refresh(site)
 
     # Cameras
     camera1 = Camera(
-        factory_id=factory.id,
+        site_id=site.id,
         name="Camera Sewing 1",
         rtsp_url="rtsp://demo_camera_1",
         zone="Sewing Line A"
     )
 
     camera2 = Camera(
-        factory_id=factory.id,
+        site_id=site.id,
         name="Camera Knitting 1",
         rtsp_url="rtsp://demo_camera_2",
         zone="Knitting Zone"
@@ -39,22 +39,22 @@ def seed():
     db.add_all([camera1, camera2])
     db.commit()
 
-    # Machines
-    sewing_machine = Machine(
+    # Workstations
+    sewing_workstation = Workstation(
         camera_id=camera1.id,
-        machine_type="SEWING",
-        reference="SW-01",
-        location="Line A - Seat 1"
+        workstation_type="SEWING",
+        identifier="SW-01",
+        zone="Line A - Seat 1"
     )
 
-    knitting_machine = Machine(
+    knitting_workstation = Workstation(
         camera_id=camera2.id,
-        machine_type="KNITTING",
-        reference="KN-01",
-        location="Zone B"
+        workstation_type="KNITTING",
+        identifier="KN-01",
+        zone="Zone B"
     )
 
-    db.add_all([sewing_machine, knitting_machine])
+    db.add_all([sewing_workstation, knitting_workstation])
     db.commit()
 
     print("✅ Seed data inserted successfully")

@@ -2,9 +2,9 @@ from app.db.session import engine
 from app.db.base import Base
 
 # Import ALL models here
-from app.models.factory import Factory
+from app.models.site import Factory
 from app.models.camera import Camera
-from app.models.machine import Machine
+from app.models.workstation import Machine
 from app.models.employee import Employee
 from app.models.event import Event
 from app.models.production import ProductionCount

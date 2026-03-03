@@ -4,24 +4,24 @@ from sqlalchemy import func, case
 from datetime import date, datetime, timedelta
 
 from app.db.session import get_db
-from app.models import event, machine
+from app.models import event
+from app.models.workstation import Workstation
 
 router = APIRouter()
 
 # Endpoint to get global KPIs for the dashboard - Taux de productivité global
 @router.get("/kpis/global")
 def global_kpis(db: Session = Depends(get_db)):
-
     today = date.today()
 
     total_cycles = db.query(func.count()).filter(
-        event.event_type == "machine_cycle",
-        func.date(event.timestamp) == today
+        event.event_type == "workstation_active",
+        func.date(event.event_time) == today
     ).scalar()
 
     idle_events = db.query(func.count()).filter(
-        event.event_type == "machine_idle",
-        func.date(event.timestamp) == today
+        event.event_type == "workstation_idle",
+        func.date(event.event_time) == today
     ).scalar()
 
     return {
@@ -33,27 +33,26 @@ def global_kpis(db: Session = Depends(get_db)):
         )
     }
 
-# Endpoint to get machine KPIs for the dashboard - Taux de productivité des machines
-@router.get("/kpis/machines")
-def machines_kpis(db: Session = Depends(get_db)):
-
+# Endpoint to get workstation KPIs for the dashboard - Taux de productivité des workstations
+@router.get("/kpis/workstations")
+def workstations_kpis(db: Session = Depends(get_db)):
     today = date.today()
 
     results = (
         db.query(
-            machine.id,
-            machine.name,
-            machine.type,
+            Workstation.id,
+            Workstation.identifier,
+            Workstation.workstation_type,
             func.count(
-                case((event.event_type == "machine_cycle", 1))
+                case((event.event_type == "workstation_active", 1))
             ).label("cycles"),
             func.count(
-                case((event.event_type == "machine_idle", 1))
+                case((event.event_type == "workstation_idle", 1))
             ).label("idle")
         )
-        .join(event, event.machine_id == machine.id)
-        .filter(func.date(event.timestamp) == today)
-        .group_by(machine.id)
+        .join(event, event.workstation_id == Workstation.id)
+        .filter(func.date(event.event_time) == today)
+        .group_by(Workstation.id)
         .all()
     )
 
@@ -62,9 +61,9 @@ def machines_kpis(db: Session = Depends(get_db)):
         productivity = r.cycles / max((r.cycles + r.idle), 1) * 100
 
         data.append({
-            "machine_id": r.id,
-            "machine_name": r.name,
-            "type": r.type,
+            "workstation_id": r.id,
+            "workstation_name": r.identifier,
+            "type": r.workstation_type,
             "cycles": r.cycles,
             "idle_events": r.idle,
             "productivity_rate": round(productivity, 2)
@@ -75,51 +74,49 @@ def machines_kpis(db: Session = Depends(get_db)):
 # Endpoint to get employee time tracking KPIs for the dashboard - Taux de présence des employés
 @router.get("/kpis/employees")
 def employee_time_tracking(db: Session = Depends(get_db)):
-
     today = date.today()
 
     results = (
         db.query(
-            event.machine_id,
+            event.workstation_id,
             func.count(
-                case((event.event_type == "employee_sitting", 1))
-            ).label("sitting_events"),
+                case((event.event_type == "employee_started_work", 1))
+            ).label("working_events"),
             func.count(
-                case((event.event_type == "employee_absent", 1))
-            ).label("absent_events"),
+                case((event.event_type == "employee_stopped_work", 1))
+            ).label("idle_events"),
         )
-        .filter(func.date(event.timestamp) == today)
-        .group_by(event.machine_id)
+        .filter(func.date(event.event_time) == today)
+        .group_by(event.workstation_id)
         .all()
     )
 
     return [
         {
-            "machine_id": r.machine_id,
-            "sitting_events": r.sitting_events,
-            "absent_events": r.absent_events,
+            "workstation_id": r.workstation_id,
+            "working_events": r.working_events,
+            "idle_events": r.idle_events,
             "presence_rate": round(
-                r.sitting_events /
-                max((r.sitting_events + r.absent_events), 1) * 100, 2
+                r.working_events /
+                max((r.working_events + r.idle_events), 1) * 100, 2
             )
         }
         for r in results
     ]
 
-# Endpoint to get daily machine cycles for the dashboard - Production par heure
+# Endpoint to get daily workstation cycles for the dashboard - Production par heure
 @router.get("/charts/hourly-production")
 def hourly_production(db: Session = Depends(get_db)):
-
     today = date.today()
 
     results = (
         db.query(
-            func.extract('hour', event.timestamp).label("hour"),
+            func.extract('hour', event.event_time).label("hour"),
             func.count().label("cycles")
         )
         .filter(
-            event.event_type == "machine_cycle",
-            func.date(event.timestamp) == today
+            event.event_type == "workstation_active",
+            func.date(event.event_time) == today
         )
         .group_by("hour")
         .order_by("hour")
@@ -134,20 +131,19 @@ def hourly_production(db: Session = Depends(get_db)):
 # Endpoint to get active alerts for the dashboard
 @router.get("/alerts/active")
 def active_alerts(db: Session = Depends(get_db)):
-
     alerts = db.query(event).filter(
         event.event_type.in_([
-            "machine_idle",
+            "workstation_idle",
             "employee_absent"
         ]),
-        event.timestamp >= datetime.now() - timedelta(minutes=30)
+        event.event_time >= datetime.now() - timedelta(minutes=30)
     ).all()
 
     return [
         {
-            "machine_id": a.machine_id,
+            "workstation_id": a.workstation_id,
             "event": a.event_type,
-            "time": a.timestamp
+            "time": a.event_time
         }
         for a in alerts
     ]

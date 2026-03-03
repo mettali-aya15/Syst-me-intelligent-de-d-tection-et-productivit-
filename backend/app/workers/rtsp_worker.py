@@ -8,7 +8,7 @@ from app.db.session import SessionLocal
 from app.models.event import Event
 from app.models.alert import Alert
 from app.models.camera import Camera
-from app.models.machine import Machine
+from app.models.workstation import Machine
 from app.services.realtime.websocket import manager
 
 class RTSPWorker:

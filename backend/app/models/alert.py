@@ -6,7 +6,7 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(BigInteger, primary_key=True, index=True)
-    machine_id = Column(Integer, ForeignKey("machines.id"), nullable=False)
+    workstation_id = Column(Integer, ForeignKey("workstations.id"), nullable=False)
 
     alert_type = Column(String(50))
     severity = Column(Enum("LOW", "MEDIUM", "HIGH", name="alert_severity"))

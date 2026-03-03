@@ -8,7 +8,7 @@ class KPICalculator:
         """
         event example:
         {
-          "machine_id": 1,
+          "workstation_id": 1,
           "status": "WORKING" | "IDLE",
           "employee_present": True,
           "duration": 1
@@ -40,5 +40,5 @@ class KPICalculator:
             "Idle time (s)": self.stats["idle_time"],
             "Presence time (s)": self.stats["presence_time"],
             "Productivity (%)": round(productivity, 2),
-            "Machine utilization (%)": round(utilization, 2)
+            "Workstation utilization (%)": round(utilization, 2)
         }
