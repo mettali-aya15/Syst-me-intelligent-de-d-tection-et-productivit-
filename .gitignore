@@ -1,0 +1,149 @@
+# === ENVIRONNEMENT & SECRETS ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# === PYTHON ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# === FASTAPI / ALEMBIC ===
+alembic.ini
+alembic/versions/*.pyc
+alembic/versions/__pycache__/
+
+# === DATA & MODELES ===
+# Garder les modèles légers, ignorer les gros fichiers
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pb
+*.tflite
+
+# Videos et gros fichiers média
+backend/data/videos/*.mp4
+backend/data/videos/*.avi
+backend/data/videos/*.mov
+backend/data/videos/*.mkv
+*.mp4
+*.avi
+*.mov
+
+# Datasets volumineux
+backend/data/datasets/*.zip
+backend/data/datasets/*.tar
+backend/data/datasets/*.gz
+
+# === FRONTEND - ANGULAR ===
+node_modules/
+dist/
+.angular/
+.out/
+coverage/
+.angular-cli.json
+*.log
+.npm/
+.eslintcache
+
+# === FRONTEND - VUEJS ===
+node_modules/
+dist/
+.output/
+.nuxt/
+*.log
+
+# === NODE GENERAL ===
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# === DATABASE ===
+*.sqlite
+*.sqlite3
+*.db
+dump.rdb
+*.mongodump
+
+# === OS & EDITEURS ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*.swn
+
+# === GIT ===
+.git/
+!.gitignore
+
+# === LOGS ===
+*.log
+logs/
+backend/logs/
+frontend/logs/
+
+# === TEMPORAIRES ===
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# === DOCUMENTATION BUILD ===
+docs/_build/
+site/
