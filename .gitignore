@@ -146,4 +146,4 @@ temp/
 
 # === DOCUMENTATION BUILD ===
 docs/_build/
-site/
+site/backend/data/videos/ 
