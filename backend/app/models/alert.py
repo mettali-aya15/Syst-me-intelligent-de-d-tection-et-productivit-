@@ -1,16 +1,48 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Enum, Boolean, ForeignKey, TIMESTAMP
-from sqlalchemy.sql import func
-from app.db.base import Base
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Modèles Pydantic pour les alertes
+"""
 
-class Alert(Base):
-    __tablename__ = "alerts"
+from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
+from typing import Optional
+from enum import Enum
+from bson import ObjectId
 
-    id = Column(BigInteger, primary_key=True, index=True)
-    workstation_id = Column(Integer, ForeignKey("workstations.id"), nullable=False)
 
-    alert_type = Column(String(50))
-    severity = Column(Enum("LOW", "MEDIUM", "HIGH", name="alert_severity"))
-    message = Column(String(255))
+class AlertSeverity(str, Enum):
+    """Sévérité des alertes"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
 
-    is_resolved = Column(Boolean, default=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())
+
+class AlertCreate(BaseModel):
+    """Données pour créer une alerte"""
+    alert_type: str
+    severity: AlertSeverity
+    message: str
+    machine_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    event_id: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class Alert(BaseModel):
+    """Alerte système"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    id: Optional[ObjectId] = Field(default=None, alias="_id")
+    alert_type: str
+    severity: AlertSeverity
+    message: str
+    machine_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    event_id: Optional[str] = None
+    metadata: Optional[dict] = None
+    is_resolved: bool = False
+    resolved_by: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.now)

@@ -1,55 +1,96 @@
-from datetime import datetime, timedelta
-import os
-from typing import Optional
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Fonctions de sécurité et authentification
+JWT, hashing de mots de passe
+"""
+
 from jose import jwt, JWTError
 from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from typing import Optional, Dict
 
-# ==========================
-# CONFIG
-# ==========================
-
-SECRET_KEY = os.getenv("JWT_SECRET")
+# Configuration
+SECRET_KEY = "your-secret-key-change-this-in-production"  # À changer en production
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 heures
 
+# Context pour hashing de mots de passe
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# ==========================
-# PASSWORD
-# ==========================
 
-def hash_password(password: str) -> str:
+# ========== HASHING DE MOTS DE PASSE ==========
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Vérifier un mot de passe contre son hash
+    
+    Args:
+        plain_password: Mot de passe en clair
+        hashed_password: Hash du mot de passe
+    
+    Returns:
+        True si le mot de passe correspond
+    """
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    """
+    Hasher un mot de passe
+    
+    Args:
+        password: Mot de passe en clair
+    
+    Returns:
+        Hash du mot de passe
+    """
     return pwd_context.hash(password)
 
-def verify_password(password: str, hashed: str) -> bool:
-    return pwd_context.verify(password, hashed)
 
-# ==========================
-# JWT
-# ==========================
+# ========== JWT TOKENS ==========
 
 def create_access_token(
-    data: dict,
+    data: Dict, 
     expires_delta: Optional[timedelta] = None
 ) -> str:
+    """
+    Créer un token JWT
+    
+    Args:
+        data: Données à encoder dans le token
+        expires_delta: Durée de validité du token
+    
+    Returns:
+        Token JWT encodé
+    """
     to_encode = data.copy()
-    expire = datetime.utcnow() + (
-        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    
+    return encoded_jwt
 
-def decode_access_token(token: str) -> Optional[dict]:
+
+def decode_access_token(token: str) -> Optional[Dict]:
+    """
+    Décoder un token JWT
+    
+    Args:
+        token: Token JWT à décoder
+    
+    Returns:
+        Payload du token ou None si invalide
+    """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
+    
     except JWTError:
         return None
-
-# ==========================
-# PERMISSIONS
-# ==========================
-
-def has_permission(user_role: str, required_role: str) -> bool:
-    roles = ["viewer", "supervisor", "admin", "director"]
-    return roles.index(user_role) >= roles.index(required_role)

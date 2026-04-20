@@ -1,29 +1,33 @@
-from pydantic import BaseModel
+# schemas/detection.py
+from pydantic import BaseModel, Field
+from typing import List, Optional
 from datetime import datetime
-from typing import Literal
 
+class DetectionBox(BaseModel):
+    """📦 Une boîte de détection (bounding box)"""
+    class_name: str           # ex: "client", "machine"
+    confidence: float         # ex: 0.89 (89% de confiance)
+    x: float                  # Position X (normalisée 0-1)
+    y: float                  # Position Y
+    width: float              # Largeur
+    height: float             # Hauteur
 
-class DetectionEventCreate(BaseModel):
-    camera_id: int
-    machine_id: int
-    event_type: Literal[
-        "bag_detected",
-        "machine_cycle",
-        "employee_present",
-        "employee_absent",
-        "employee_sitting",
-        "machine_idle"
-    ]
-    confidence: float
+class FrameDetection(BaseModel):
+    """🖼️ Détections pour une frame vidéo"""
+    frame_number: int         # Numéro de l'image dans la vidéo
+    timestamp: float          # Temps en secondes
+    detections: List[DetectionBox]
 
+class VideoAnalysisRequest(BaseModel):
+    """📤 Données envoyées pour analyser une vidéo"""
+    video_path: str           # Chemin ou URL de la vidéo
+    confidence: Optional[float] = 0.25
 
-class DetectionEventOut(BaseModel):
-    id: int
-    camera_id: int
-    machine_id: int
-    event_type: str
-    confidence: float
-    timestamp: datetime
-
-    class Config:
-        from_attributes = True
+class VideoAnalysisResponse(BaseModel):
+    """📥 Réponse de l'API après analyse"""
+    video_name: str
+    total_frames: int
+    total_detections: int
+    summary: dict             # Compte par classe
+    results: List[FrameDetection]
+    processed_at: datetime = Field(default_factory=datetime.now)

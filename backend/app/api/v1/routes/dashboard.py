@@ -1,149 +1,179 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import func, case
-from datetime import date, datetime, timedelta
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Routes API pour le dashboard
+Vue d'ensemble consolidée
+"""
 
-from app.db.session import get_db
-from app.models import event
-from app.models.workstation import Workstation
+from fastapi import APIRouter, HTTPException
+from datetime import datetime, date
+
+from app.services.analytics import KPICalculator, ProductivityService
+from app.services.logic import MachineLogic
+from core.database import Database
+
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Endpoint to get global KPIs for the dashboard - Taux de productivité global
-@router.get("/kpis/global")
-def global_kpis(db: Session = Depends(get_db)):
-    today = date.today()
 
-    total_cycles = db.query(func.count()).filter(
-        event.event_type == "workstation_active",
-        func.date(event.event_time) == today
-    ).scalar()
-
-    idle_events = db.query(func.count()).filter(
-        event.event_type == "workstation_idle",
-        func.date(event.event_time) == today
-    ).scalar()
-
-    return {
-        "date": today,
-        "total_cycles": total_cycles,
-        "idle_events": idle_events,
-        "global_productivity_rate": round(
-            total_cycles / max((total_cycles + idle_events), 1) * 100, 2
-        )
-    }
-
-# Endpoint to get workstation KPIs for the dashboard - Taux de productivité des workstations
-@router.get("/kpis/workstations")
-def workstations_kpis(db: Session = Depends(get_db)):
-    today = date.today()
-
-    results = (
-        db.query(
-            Workstation.id,
-            Workstation.identifier,
-            Workstation.workstation_type,
-            func.count(
-                case((event.event_type == "workstation_active", 1))
-            ).label("cycles"),
-            func.count(
-                case((event.event_type == "workstation_idle", 1))
-            ).label("idle")
-        )
-        .join(event, event.workstation_id == Workstation.id)
-        .filter(func.date(event.event_time) == today)
-        .group_by(Workstation.id)
-        .all()
-    )
-
-    data = []
-    for r in results:
-        productivity = r.cycles / max((r.cycles + r.idle), 1) * 100
-
-        data.append({
-            "workstation_id": r.id,
-            "workstation_name": r.identifier,
-            "type": r.workstation_type,
-            "cycles": r.cycles,
-            "idle_events": r.idle,
-            "productivity_rate": round(productivity, 2)
+@router.get("/overview")
+async def get_dashboard_overview():
+    """
+    Obtenir une vue d'ensemble complète du dashboard
+    
+    Returns:
+        Vue d'ensemble consolidée
+    """
+    try:
+        # KPIs temps réel
+        realtime_metrics = await KPICalculator.get_realtime_metrics()
+        
+        # Résumé machines
+        machines_summary = await MachineLogic.get_machines_status_summary()
+        
+        # Employés
+        employees_collection = Database.get_collection("employees")
+        total_employees = await employees_collection.count_documents({"is_active": True})
+        
+        # Vidéos du jour
+        videos_collection = Database.get_collection("video_uploads")
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        videos_today = await videos_collection.count_documents({
+            "processed_at": {"$gte": today_start},
+            "status": "completed"
         })
-
-    return data
-
-# Endpoint to get employee time tracking KPIs for the dashboard - Taux de présence des employés
-@router.get("/kpis/employees")
-def employee_time_tracking(db: Session = Depends(get_db)):
-    today = date.today()
-
-    results = (
-        db.query(
-            event.workstation_id,
-            func.count(
-                case((event.event_type == "employee_started_work", 1))
-            ).label("working_events"),
-            func.count(
-                case((event.event_type == "employee_stopped_work", 1))
-            ).label("idle_events"),
-        )
-        .filter(func.date(event.event_time) == today)
-        .group_by(event.workstation_id)
-        .all()
-    )
-
-    return [
-        {
-            "workstation_id": r.workstation_id,
-            "working_events": r.working_events,
-            "idle_events": r.idle_events,
-            "presence_rate": round(
-                r.working_events /
-                max((r.working_events + r.idle_events), 1) * 100, 2
-            )
+        
+        # Alertes actives
+        alerts_collection = Database.get_collection("alerts")
+        active_alerts = await alerts_collection.count_documents({"is_resolved": False})
+        
+        return {
+            "timestamp": datetime.now(),
+            "realtime": realtime_metrics,
+            "summary": {
+                "employees": {
+                    "total": total_employees,
+                    "present": realtime_metrics.get("metrics", {}).get("employees_present", 0) if realtime_metrics.get("status") == "active" else 0
+                },
+                "machines": {
+                    "total": machines_summary["total"],
+                    "active": machines_summary["active"],
+                    "stopped": machines_summary["stopped"]
+                },
+                "videos_processed_today": videos_today,
+                "active_alerts": active_alerts
+            },
+            "machines_detail": machines_summary["machines"]
         }
-        for r in results
-    ]
+    
+    except Exception as e:
+        logger.error(f"❌ Erreur vue d'ensemble dashboard : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint to get daily workstation cycles for the dashboard - Production par heure
-@router.get("/charts/hourly-production")
-def hourly_production(db: Session = Depends(get_db)):
-    today = date.today()
 
-    results = (
-        db.query(
-            func.extract('hour', event.event_time).label("hour"),
-            func.count().label("cycles")
+@router.get("/productivity/current")
+async def get_current_productivity():
+    """
+    Obtenir la productivité actuelle
+    (Basée sur la dernière vidéo traitée)
+    
+    Returns:
+        Métriques de productivité
+    """
+    try:
+        # Récupérer la dernière vidéo complète
+        videos_collection = Database.get_collection("video_uploads")
+        latest_video = await videos_collection.find_one(
+            {"status": "completed"},
+            sort=[("processed_at", -1)]
         )
-        .filter(
-            event.event_type == "workstation_active",
-            func.date(event.event_time) == today
-        )
-        .group_by("hour")
-        .order_by("hour")
-        .all()
-    )
+        
+        if not latest_video:
+            return {
+                "status": "no_data",
+                "message": "Aucune vidéo traitée disponible"
+            }
+        
+        video_id = str(latest_video["_id"])
+        
+        # Calculer la productivité
+        productivity = await ProductivityService.calculate_from_video(video_id)
+        
+        return productivity
+    
+    except Exception as e:
+        logger.error(f"❌ Erreur productivité actuelle : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return [
-        {"hour": int(r.hour), "cycles": r.cycles}
-        for r in results
-    ]
 
-# Endpoint to get active alerts for the dashboard
 @router.get("/alerts/active")
-def active_alerts(db: Session = Depends(get_db)):
-    alerts = db.query(event).filter(
-        event.event_type.in_([
-            "workstation_idle",
-            "employee_absent"
-        ]),
-        event.event_time >= datetime.now() - timedelta(minutes=30)
-    ).all()
-
-    return [
-        {
-            "workstation_id": a.workstation_id,
-            "event": a.event_type,
-            "time": a.event_time
+async def get_active_alerts():
+    """
+    Obtenir les alertes actives
+    
+    Returns:
+        Liste des alertes non résolues
+    """
+    try:
+        collection = Database.get_collection("alerts")
+        cursor = collection.find({"is_resolved": False}).sort("created_at", -1).limit(20)
+        alerts = await cursor.to_list(length=20)
+        
+        return {
+            "count": len(alerts),
+            "alerts": [
+                {
+                    "id": str(alert["_id"]),
+                    "type": alert["alert_type"],
+                    "severity": alert["severity"],
+                    "message": alert["message"],
+                    "created_at": alert["created_at"]
+                }
+                for alert in alerts
+            ]
         }
-        for a in alerts
-    ]
+    
+    except Exception as e:
+        logger.error(f"❌ Erreur alertes actives : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stats/today")
+async def get_today_stats():
+    """
+    Obtenir les statistiques du jour
+    
+    Returns:
+        Statistiques de la journée
+    """
+    try:
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        
+        # Vidéos traitées
+        videos_collection = Database.get_collection("video_uploads")
+        videos_cursor = videos_collection.find({
+            "processed_at": {"$gte": today_start},
+            "status": "completed"
+        })
+        videos = await videos_cursor.to_list(length=None)
+        
+        total_detections = sum(v.get("total_detections", 0) for v in videos)
+        
+        # Événements créés
+        events_collection = Database.get_collection("events")
+        events_today = await events_collection.count_documents({
+            "created_at": {"$gte": today_start}
+        })
+        
+        return {
+            "date": date.today(),
+            "videos_processed": len(videos),
+            "total_detections": total_detections,
+            "events_generated": events_today
+        }
+    
+    except Exception as e:
+        logger.error(f"❌ Erreur stats du jour : {e}")
+        raise HTTPException(status_code=500, detail=str(e))

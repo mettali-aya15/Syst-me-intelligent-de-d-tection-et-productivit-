@@ -1,13 +1,43 @@
-from sqlalchemy import Column, Integer, String, Enum, TIMESTAMP
-from sqlalchemy.sql import func
-from app.db.base import Base
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Modèles Pydantic pour les utilisateurs
+"""
 
-class User(Base):
-    __tablename__ = "users"
+from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
+from typing import Optional
+from bson import ObjectId
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
 
-    role = Column(Enum("ADMIN", "SUPERVISOR", "VIEWER", name="user_role"))
-    created_at = Column(TIMESTAMP, server_default=func.now())
+class UserCreate(BaseModel):
+    """Données pour créer un utilisateur"""
+    username: str
+    password: str
+    role: str = "viewer"
+
+
+class UserUpdate(BaseModel):
+    """Données pour mettre à jour un utilisateur"""
+    username: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+
+
+class User(BaseModel):
+    """Utilisateur système"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    id: Optional[ObjectId] = Field(default=None, alias="_id")
+    username: str
+    password_hash: str
+    role: str = "viewer"
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class UserOut(BaseModel):
+    """Utilisateur (sortie API - sans password)"""
+    _id: str
+    username: str
+    role: str
+    created_at: datetime
