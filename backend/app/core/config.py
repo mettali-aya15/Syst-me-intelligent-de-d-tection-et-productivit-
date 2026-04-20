@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     
     # Modèles YOLO
     MODEL_EMPLOYEES_PATH: str = "data/models/best_person.pt"
+    EMPLOYEE_MODEL_PATH: str = "data/models/best_person.pt"  # ✅ Changé ici
+    OBJECT_MODEL_PATH: str = "data/models/best_objects.pt"
     MODEL_GENERAL_PATH: str = "data/models/best_objects.pt"  # ✅ Changé ici
     
     # Stockage

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Service de gestion des vidéos - MÉTHODE STATISTIQUE SIMPLE
+Service de gestion des vidéos - COMPTAGE PAR LIGNE ADAPTATIF
 """
 
 import shutil
@@ -94,20 +94,23 @@ class VideoService:
             logger.error(f"❌ Erreur upload vidéo : {e}")
             raise
     
-
     @staticmethod
-    def count_unique_objects_smart(frames_detections: List[FrameDetection]) -> dict:
-        """
-        Comptage intelligent - Méthode statistique TOP 20%
-        Pour machines/objets statiques: médiane du TOP 20%
-        Pour produits/employés mobiles: maximum observé
-        """
+    def count_unique_objects_smart(frames_detections: List[FrameDetection], line_counts: dict = None) -> dict:
+        """Comptage intelligent avec support ligne"""
         if not frames_detections:
             return {}
         
+        unique_objects = {}
+        
+        # Utiliser comptage par ligne pour produits
+        if line_counts and "produit" in line_counts:
+            total_produits = line_counts["produit"]["TOTAL"]
+            unique_objects["produit"] = total_produits
+            logger.info(f"📏 produit: Ligne IN={line_counts['produit']['IN']}, OUT={line_counts['produit']['OUT']}, TOTAL={total_produits}")
+        
+        # Méthode statistique pour les autres
         class_counts_per_frame = defaultdict(list)
         
-        # Collecter les comptages par frame
         for frame_detection in frames_detections:
             frame_counts = defaultdict(int)
             for detection in frame_detection.detections:
@@ -116,42 +119,30 @@ class VideoService:
             for class_name, count in frame_counts.items():
                 class_counts_per_frame[class_name].append(count)
         
-        unique_objects = {}
-        
-        # Classes mobiles (produits sur convoyeur)
-        MOBILE_CLASSES = ["produit"]
-        
         for class_name, counts in class_counts_per_frame.items():
+            if class_name in unique_objects:
+                continue  # Déjà compté par ligne
+            
             non_zero = [c for c in counts if c > 0]
             if not non_zero:
                 continue
             
-            # Pour produits: utiliser MAXIMUM (tous les produits passent)
-            if any(mobile in class_name.lower() for mobile in MOBILE_CLASSES):
-                result = max(non_zero)
-                logger.info(f"📦 {class_name}: MAXIMUM = {result}")
+            sorted_counts = sorted(non_zero, reverse=True)
+            top_20_percent = max(1, len(sorted_counts) // 5)
+            top_values = sorted_counts[:top_20_percent]
             
-            # Pour objets statiques: MÉDIANE du TOP 20%
+            median_idx = len(top_values) // 2
+            if len(top_values) % 2 == 0:
+                result = (top_values[median_idx - 1] + top_values[median_idx]) / 2
             else:
-                sorted_counts = sorted(non_zero, reverse=True)
-                top_20_percent = max(1, len(sorted_counts) // 5)
-                top_values = sorted_counts[:top_20_percent]
-                
-                median_idx = len(top_values) // 2
-                if len(top_values) % 2 == 0:
-                    result = (top_values[median_idx - 1] + top_values[median_idx]) / 2
-                else:
-                    result = top_values[median_idx]
-                
-                logger.info(f"📦 {class_name}: TOP20% médiane = {result:.1f} → {int(round(result))}")
-                result = int(round(result))
+                result = top_values[median_idx]
             
             unique_objects[class_name] = int(round(result))
+            logger.info(f"📦 {class_name}: TOP20% médiane = {result:.1f} → {int(round(result))}")
         
         logger.info(f"🎯 Final: {unique_objects}")
         
         return unique_objects
-    
     
     @staticmethod
     async def process_video(
@@ -160,7 +151,7 @@ class VideoService:
         model_type: str = "both",
         websocket=None
     ) -> dict:
-        """Traiter une vidéo"""
+        """Traiter une vidéo avec comptage par ligne adaptatif"""
         Database = VideoService._get_db()
         
         try:
@@ -194,17 +185,19 @@ class VideoService:
             logger.info(f"🎯 Conf={conf}, Model={model_type}")
             
             processor = FrameProcessor()
-            frames_detections, metadata = processor.process_video(
+            
+            # Utiliser le comptage par ligne adaptatif
+            # Utiliser la nouvelle méthode adaptative
+            frames_detections, metadata, line_counts = processor.process_video_with_line_counting(
                 video_path=str(video.file_path),
                 output_path=str(annotated_path),
                 conf=conf,
-                save_annotated=True,
-                progress_callback=progress_callback,
-                model_type=model_type
+                model_type=model_type,
+                progress_callback=progress_callback
             )
             
             logger.info(f"🔍 Comptage objets uniques...")
-            unique_objects = VideoService.count_unique_objects_smart(frames_detections)
+            unique_objects = VideoService.count_unique_objects_smart(frames_detections, line_counts)
             
             detections_collection = Database.get_collection("video_detections")
             

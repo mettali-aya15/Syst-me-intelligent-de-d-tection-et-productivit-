@@ -9,6 +9,8 @@ import cv2
 import numpy as np
 from typing import List, Tuple, Optional, Callable, Literal
 from pathlib import Path
+from collections import defaultdict
+from ultralytics import solutions
 
 from app.models.detection import FrameDetection, Detection, BoundingBox
 from .yolo_detector import YOLODetector
@@ -46,9 +48,6 @@ class FrameProcessor:
             save_annotated: Sauvegarder la vidéo annotée
             progress_callback: Fonction de callback pour progression
             model_type: Type de modèle à utiliser
-                - "employees": Uniquement détection employés
-                - "objects": Uniquement détection objets
-                - "both": Les deux modèles (défaut)
         
         Returns:
             (frames_detections, metadata)
@@ -93,7 +92,7 @@ class FrameProcessor:
                 if not ret:
                     break
                 
-                # Détecter dans la frame avec le modèle choisi
+                # Détecter dans la frame
                 timestamp = frame_number / fps if fps > 0 else 0
                 detections = self.detector.detect_frame(
                     frame, 
@@ -133,17 +132,202 @@ class FrameProcessor:
             logger.error(f"❌ Erreur traitement vidéo : {e}")
             raise
     
+    def process_video_with_line_counting(
+    self,
+    video_path: str,
+    output_path: str,
+    conf: float = 0.5,
+    model_type: str = "both",
+    progress_callback=None
+) -> tuple:
+        """+
+        Traiter vidéo avec 10 lignes + DÉDUPLICATION DES IDs
+        """
+        cap = cv2.VideoCapture(video_path)
+        
+        if not cap.isOpened():
+            raise ValueError(f"Impossible d'ouvrir la vidéo : {video_path}")
+        
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        # 10 lignes
+        line_positions = {
+            "ligne_1": [(0, int(height * 0.10)), (width, int(height * 0.10))],
+            "ligne_2": [(0, int(height * 0.20)), (width, int(height * 0.20))],
+            "ligne_3": [(0, int(height * 0.30)), (width, int(height * 0.30))],
+            "ligne_4": [(0, int(height * 0.40)), (width, int(height * 0.40))],
+            "ligne_5": [(0, int(height * 0.50)), (width, int(height * 0.50))],
+            "ligne_6": [(0, int(height * 0.60)), (width, int(height * 0.60))],
+            "ligne_7": [(0, int(height * 0.70)), (width, int(height * 0.70))],
+            "ligne_8": [(0, int(height * 0.80)), (width, int(height * 0.80))],
+            "ligne_9": [(0, int(height * 0.90)), (width, int(height * 0.90))],
+            "ligne_10": [(0, int(height * 0.95)), (width, int(height * 0.95))]
+        }
+        
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        
+        frames_detections = []
+        frame_idx = 0
+        
+        object_model = self.detector.get_object_model()
+        
+        # Initialiser compteurs
+        counters = {}
+        line_counts = {}
+        
+        for line_name, line_pts in line_positions.items():
+            counters[line_name] = solutions.ObjectCounter(
+                show=False,
+                region=line_pts,
+                line_width=2,
+                model=object_model
+            )
+            line_counts[line_name] = {"IN": 0, "OUT": 0, "TOTAL": 0}
+        
+        # 🎯 ENSEMBLE GLOBAL POUR DÉDUPLICATION
+        global_counted_ids = set()
+        
+        logger.info("="*70)
+        logger.info(f"📏 Comptage avec DÉDUPLICATION des IDs")
+        logger.info("="*70)
+        
+        while cap.isOpened():
+            success, frame_original = cap.read()
+            if not success:
+                break
+            
+            frame_detections = []
+            timestamp = frame_idx / fps
+            
+            if model_type in ["objects", "both"]:
+                annotated_frames = {}
+                
+                for line_name, counter in counters.items():
+                    frame_copy = frame_original.copy()
+                    
+                    results = counter.process(frame_copy)
+                    
+                    annotated_frames[line_name] = results.plot_im
+                    
+                    # Mise à jour comptages
+                    line_counts[line_name]["IN"] = results.in_count
+                    line_counts[line_name]["OUT"] = results.out_count
+                    line_counts[line_name]["TOTAL"] = results.in_count + results.out_count
+                    
+                    # 🎯 DÉDUPLICATION : Ajouter les IDs uniques
+                    if hasattr(counter, 'counted_ids') and counter.counted_ids:
+                        for track_id in counter.counted_ids:
+                            if track_id not in global_counted_ids:
+                                global_counted_ids.add(track_id)
+                                logger.info(f"✅ Nouveau produit détecté: ID={track_id} par {line_name} (frame {frame_idx})")
+                
+                frame = annotated_frames["ligne_5"]
+                
+                # Snapshot avec comptage dédupliqué
+                if frame_idx > 0 and frame_idx % 100 == 0:
+                    logger.info(f"\n📊 SNAPSHOT Frame {frame_idx}/{total_frames}:")
+                    for line_name, counts in sorted(line_counts.items()):
+                        logger.info(f"   {line_name}: TOTAL={counts['TOTAL']}")
+                    logger.info(f"   🎯 IDs UNIQUES: {len(global_counted_ids)}")
+                
+                # Parser détections
+                counter_centre = counters["ligne_5"]
+                if hasattr(counter_centre, 'boxes') and counter_centre.boxes is not None:
+                    for box, cls, conf_val in zip(counter_centre.boxes, counter_centre.clss, counter_centre.confs):
+                        class_name = counter_centre.names[int(cls)]
+                        
+                        if class_name.lower() in self.detector.MEDICAL_CLASSES:
+                            continue
+                        
+                        x1, y1, x2, y2 = box
+                        
+                        detection = Detection(
+                            class_name=class_name,
+                            confidence=float(conf_val),
+                            bbox=BoundingBox(
+                                x=float(x1) / width,
+                                y=float(y1) / height,
+                                width=float(x2 - x1) / width,
+                                height=float(y2 - y1) / height
+                            ),
+                            source="object"
+                        )
+                        frame_detections.append(detection)
+            else:
+                frame = frame_original.copy()
+            
+            # EMPLOYÉS
+            if model_type in ["employees", "both"]:
+                detections_emp = self.detector.detect_frame(frame, conf=conf, model_type="employees")
+                frame_detections.extend(detections_emp)
+            
+            frames_detections.append(
+                FrameDetection(
+                    frame_number=frame_idx,
+                    timestamp=timestamp,
+                    detections=frame_detections
+                )
+            )
+            
+            # Afficher comptage dédupliqué sur la vidéo
+            cv2.putText(frame, f"UNIQUE IDs: {len(global_counted_ids)}", (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            
+            out.write(frame)
+            frame_idx += 1
+            
+            if progress_callback and frame_idx % 30 == 0:
+                progress_callback(frame_idx, total_frames)
+        
+        cap.release()
+        out.release()
+        
+        # 🎯 RÉSULTAT FINAL = NOMBRE D'IDs UNIQUES
+        final_count = len(global_counted_ids)
+        
+        # Pour compatibilité, on garde aussi le maximum
+        max_total = max(counts["TOTAL"] for counts in line_counts.values())
+        best_line = max(line_counts.items(), key=lambda x: x[1]["TOTAL"])
+        
+        final_counts = {
+            "produit": {
+                "IN": final_count,  # Utiliser le comptage dédupliqué
+                "OUT": 0,
+                "TOTAL": final_count,  # 🎯 COMPTAGE DÉDUPLIQUÉ
+                "best_line": "deduplication_globale",
+                "max_line_count": max_total,  # Pour comparaison
+                "unique_ids": list(global_counted_ids)  # Liste des IDs
+            }
+        }
+        
+        metadata = {
+            "total_frames": total_frames,
+            "fps": fps,
+            "width": width,
+            "height": height,
+            "duration": total_frames / fps,
+            "model_type": model_type
+        }
+        
+        logger.info("\n" + "="*70)
+        logger.info(f"📏 RÉSULTATS FINAUX:")
+        logger.info("="*70)
+        for line_name, counts in sorted(line_counts.items()):
+            logger.info(f"   {line_name}: TOTAL={counts['TOTAL']}")
+        logger.info("="*70)
+        logger.info(f"📊 MAXIMUM des lignes: {max_total}")
+        logger.info(f"🎯 COMPTAGE DÉDUPLIQUÉ: {final_count} produits uniques")
+        logger.info(f"📋 IDs uniques: {sorted(global_counted_ids)}")
+        logger.info("="*70)
+        
+        return frames_detections, metadata, final_counts
+    
     def draw_detections(self, frame: np.ndarray, detections: List[Detection]) -> np.ndarray:
-        """
-        Dessiner les détections sur une frame
-        
-        Args:
-            frame: Frame OpenCV
-            detections: Liste des détections
-        
-        Returns:
-            Frame annotée
-        """
+        """Dessiner les détections sur une frame"""
         annotated = frame.copy()
         h, w = frame.shape[:2]
         
@@ -154,29 +338,21 @@ class FrameProcessor:
         
         # Dessiner chaque détection
         for det in detections:
-            # Convertir bbox normalisé en pixels
             x1 = int(det.bbox.x * w)
             y1 = int(det.bbox.y * h)
-            w_box = int(det.bbox.width * w)
-            h_box = int(det.bbox.height * h)
-            x2 = x1 + w_box
-            y2 = y1 + h_box
+            x2 = int((det.bbox.x + det.bbox.width) * w)
+            y2 = int((det.bbox.y + det.bbox.height) * h)
             
-            # Couleur selon la source
             color = self.detector.get_color(det.class_name)
             
-            # Dessiner rectangle
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
             
-            # Label
             label = f"{det.class_name} {det.confidence:.2f}"
-            
-            # Background pour le texte
             (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
             cv2.rectangle(annotated, (x1, y1 - label_h - 10), (x1 + label_w, y1), color, -1)
             cv2.putText(annotated, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
-        # Afficher les compteurs en haut
+        # Afficher compteurs en haut
         y_offset = 30
         for class_name, count in sorted(class_counts.items()):
             color = self.detector.get_color(class_name)
@@ -188,16 +364,7 @@ class FrameProcessor:
     
     @staticmethod
     def extract_frame(video_path: str, frame_number: int) -> Optional[np.ndarray]:
-        """
-        Extraire une frame spécifique
-        
-        Args:
-            video_path: Chemin de la vidéo
-            frame_number: Numéro de la frame
-        
-        Returns:
-            Frame ou None
-        """
+        """Extraire une frame spécifique"""
         try:
             cap = cv2.VideoCapture(video_path)
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
