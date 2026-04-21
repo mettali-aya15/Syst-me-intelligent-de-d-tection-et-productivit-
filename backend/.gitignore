@@ -1,10 +1,44 @@
-.vscode/*
-__pycache__
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
 venv/
-.venv
 .python-version
-.pyttest_cache
+.pytest_cache/
 .coverage
-htmlcov
-logs
-vendor
+htmlcov/
+
+# ===== Logs =====
+logs/
+*.log
+
+# ===== Environnement =====
+.env
+backend/.env
+
+# ===== VS Code =====
+.vscode/
+
+# ===== Backend data (IMPORTANT) =====
+backend/data/
+*.mp4
+*.avi
+*.mov
+
+# ===== AI Models =====
+*.pt
+*.pth
+
+# ===== Angular (cache uniquement) =====
+frontend/Angular/.angular/
+frontend/Angular/node_modules/
+
+# ===== Build =====
+dist/
+build/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
