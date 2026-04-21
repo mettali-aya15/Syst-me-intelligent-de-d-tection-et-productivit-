@@ -1,0 +1,9 @@
+client
+machine
+machine arrêtée
+produit
+employé
+employé actif
+employé inactif
+tables
+tables_vides

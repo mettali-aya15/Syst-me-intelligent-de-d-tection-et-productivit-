@@ -1,0 +1,37 @@
+{
+  "categories": [
+    {
+      "id": 0,
+      "name": "Benign"
+    },
+    {
+      "id": 1,
+      "name": "Malignant"
+    },
+    {
+      "id": 2,
+      "name": "Normal"
+    },
+    {
+      "id": 3,
+      "name": "employ\u00e9"
+    },
+    {
+      "id": 4,
+      "name": "machine"
+    },
+    {
+      "id": 5,
+      "name": "machine arr\u00eat\u00e9e"
+    },
+    {
+      "id": 6,
+      "name": "produit"
+    }
+  ],
+  "info": {
+    "year": 2026,
+    "version": "1.0",
+    "contributor": "Label Studio"
+  }
+}

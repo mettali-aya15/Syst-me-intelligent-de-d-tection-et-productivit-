@@ -1,0 +1,30 @@
+# CAMIA-Factory Dataset
+path: C:/Users/eyama/OneDrive/Bureau/camIA-factory/yolo/detection_final
+train: train/images
+val: val/images
+
+# Toutes les classes YOLO (9 classes)
+nc: 9
+names:
+  0: client
+  1: machine
+  2: machine arrêtée
+  3: produit
+  4: employé
+  5: employé actif
+  6: employé inactif
+  7: tables
+  8: tables_vides
+
+# Distribution actuelle (1219 annotations):
+# - produit: 905 (74.2%) ✅
+# - machine: 177 (14.5%) ✅
+# - employé: 72 (5.9%) ✅
+# - employé actif: 37 (3.0%) ✅
+# - client: 22 (1.8%) ✅
+# - machine arrêtée: 6 (0.5%) ⚠️ TRÈS PEU
+# - employé inactif: 0 (0.0%) ❌ AUCUN
+# - tables: 0 (0.0%) ❌ AUCUN
+# - tables_vides: 0 (0.0%) ❌ AUCUN
+
+# Déséquilibre: ratio 150.8:1 (CRITIQUE)

@@ -1,0 +1,17 @@
+Adem
+Alena
+Ali
+Amelie
+Amir
+Benign
+Ibtihel
+Insaf
+Malignant
+Mohamed
+Normal
+Sami
+Seline
+employe
+porte_verte
+temp
+employé

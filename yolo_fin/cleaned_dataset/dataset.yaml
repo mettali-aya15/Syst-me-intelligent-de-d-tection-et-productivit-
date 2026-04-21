@@ -1,0 +1,15 @@
+names:
+- client
+- employé
+- employé actif
+- employé inactif
+- machine
+- machine arrêtée
+- produit
+- tables
+- tables_vides
+nc: 9
+path: C:\Users\eyama\OneDrive\Bureau\camIA-factory\yolo_fin\cleaned_dataset
+test: ''
+train: train/images
+val: val/images

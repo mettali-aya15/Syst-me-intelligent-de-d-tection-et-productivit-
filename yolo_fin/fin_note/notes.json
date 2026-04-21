@@ -1,0 +1,57 @@
+{
+  "categories": [
+    {
+      "id": 0,
+      "name": "Benign"
+    },
+    {
+      "id": 1,
+      "name": "Malignant"
+    },
+    {
+      "id": 2,
+      "name": "Normal"
+    },
+    {
+      "id": 3,
+      "name": "client"
+    },
+    {
+      "id": 4,
+      "name": "employ\u00e9"
+    },
+    {
+      "id": 5,
+      "name": "employ\u00e9 actif"
+    },
+    {
+      "id": 6,
+      "name": "employ\u00e9 inactif"
+    },
+    {
+      "id": 7,
+      "name": "machine"
+    },
+    {
+      "id": 8,
+      "name": "machine arr\u00eat\u00e9e"
+    },
+    {
+      "id": 9,
+      "name": "produit"
+    },
+    {
+      "id": 10,
+      "name": "tables"
+    },
+    {
+      "id": 11,
+      "name": "tables_vides"
+    }
+  ],
+  "info": {
+    "year": 2026,
+    "version": "1.0",
+    "contributor": "Label Studio"
+  }
+}

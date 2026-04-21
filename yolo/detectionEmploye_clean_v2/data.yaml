@@ -1,0 +1,24 @@
+# Configuration YOLO - Détection employés CAMIA-Factory
+# Généré automatiquement
+# temp et employe sont des classes SÉPARÉES
+
+path: C:\Users\eyama\OneDrive\Bureau\camIA-factory\yolo\detectionEmploye_clean_v2
+train: images
+val: images
+
+nc: 13
+
+names:
+  0: Adem
+  1: Alena
+  2: Ali
+  3: Amelie
+  4: Amir
+  5: Ibtihel
+  6: Insaf
+  7: Mohamed
+  8: Sami
+  9: Seline
+  10: employe
+  11: porte_verte
+  12: temp

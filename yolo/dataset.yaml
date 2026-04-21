@@ -1,0 +1,11 @@
+path: C:/Users/eyama/OneDrive/Bureau/camIA-factory/yolo/project-10-at-2026-03-28-12-07-267708ef
+train: images
+val: images
+nc: 6
+names:
+  - client
+  - employe
+  - machine
+  - machine_arretee
+  - produit
+  - table

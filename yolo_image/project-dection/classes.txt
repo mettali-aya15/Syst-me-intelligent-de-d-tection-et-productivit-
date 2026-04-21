@@ -1,0 +1,12 @@
+Benign
+Malignant
+Normal
+client
+employé
+employé actif
+employé inactif
+machine
+machine arrêtée
+produit
+tables
+tables_vides

@@ -1,0 +1,7 @@
+# CAMIA-Factory Dataset Configuration
+path: C:\Users\eyama\OneDrive\Bureau\camIA-factory\yolo_fin\cleaned_dataset
+train: images
+val: images
+
+nc: 9
+names: ['client', 'employé', 'employé actif', 'employé inactif', 'machine', 'machine arrêtée', 'produit', 'tables', 'tables_vides']

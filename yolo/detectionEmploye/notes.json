@@ -1,0 +1,77 @@
+{
+  "categories": [
+    {
+      "id": 0,
+      "name": "Adem"
+    },
+    {
+      "id": 1,
+      "name": "Alena"
+    },
+    {
+      "id": 2,
+      "name": "Ali"
+    },
+    {
+      "id": 3,
+      "name": "Amelie"
+    },
+    {
+      "id": 4,
+      "name": "Amir"
+    },
+    {
+      "id": 5,
+      "name": "Benign"
+    },
+    {
+      "id": 6,
+      "name": "Ibtihel"
+    },
+    {
+      "id": 7,
+      "name": "Insaf"
+    },
+    {
+      "id": 8,
+      "name": "Malignant"
+    },
+    {
+      "id": 9,
+      "name": "Mohamed"
+    },
+    {
+      "id": 10,
+      "name": "Normal"
+    },
+    {
+      "id": 11,
+      "name": "Sami"
+    },
+    {
+      "id": 12,
+      "name": "Seline"
+    },
+    {
+      "id": 13,
+      "name": "employe"
+    },
+    {
+      "id": 14,
+      "name": "porte_verte"
+    },
+    {
+      "id": 15,
+      "name": "temp"
+    },
+    {
+      "id": 16,
+      "name": "employ\u00e9"
+    }
+  ],
+  "info": {
+    "year": 2026,
+    "version": "1.0",
+    "contributor": "Label Studio"
+  }
+}

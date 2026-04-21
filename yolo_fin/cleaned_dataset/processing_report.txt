@@ -1,0 +1,23 @@
+=== RAPPORT DE TRAITEMENT DATASET CAMIA-FACTORY ===
+
+Date: 2026-04-15
+
+Classes retirées:
+  - Benign
+  - Malignant
+  - Normal
+
+Classes conservées (réindexées):
+  0: client
+  1: employé
+  2: employé actif
+  3: employé inactif
+  4: machine
+  5: machine arrêtée
+  6: produit
+  7: tables
+  8: tables_vides
+
+✓ Aucun problème détecté
+
+Répertoire de sortie: C:\Users\eyama\OneDrive\Bureau\camIA-factory\yolo_fin\cleaned_dataset
