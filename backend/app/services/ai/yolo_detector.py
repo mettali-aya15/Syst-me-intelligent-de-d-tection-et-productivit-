@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Détecteur YOLO
-Charge les modèles et effectue les détections
+Détecteur YOLO - Optimisé pour ByteTrack et Normalisation des Coordonnées
 """
 
 from ultralytics import YOLO
 import cv2
 import numpy as np
-from typing import List, Literal
+from typing import List, Literal, Set
 from pathlib import Path
 
 from app.models.detection import Detection, BoundingBox
@@ -19,123 +18,163 @@ logger = logging.getLogger(__name__)
 
 
 class YOLODetector:
-    """Détecteur YOLO pour employés et objets"""
+    """Gestionnaire des modèles YOLO pour employés et objets"""
     
-    # Classes médicales à filtrer
+    # Classes à ignorer (ex: contexte médical si non pertinent)
     MEDICAL_CLASSES = {
         'doctor', 'nurse', 'patient', 'wheelchair', 'hospital bed',
         'stethoscope', 'syringe', 'medical mask', 'thermometer',
-        'blood pressure monitor', 'iv stand', 'stretcher', 'crutches',
-        'médecin', 'infirmière', 'patient', 'fauteuil roulant',
-        'lit hôpital', 'stéthoscope', 'seringue', 'masque médical'
+        'médecin', 'infirmière', 'fauteuil roulant'
     }
     
+    # Noms propres d'employés (pour filtrage en mode 'objects' si nécessaire)
+    EMPLOYEE_NAMES: Set[str] = {'amir', 'seline', 'ali', 'adem', 'person'} 
+    
     def __init__(self):
-        """Initialiser les modèles YOLO"""
         logger.info("🔧 Initialisation YOLODetector...")
         
-        # Charger les modèles
+        # Chargement des modèles
         self.employee_model = YOLO(str(settings.EMPLOYEE_MODEL_PATH))
         self.object_model = YOLO(str(settings.OBJECT_MODEL_PATH))
         
-        logger.info(f"✅ Modèle employés: {settings.EMPLOYEE_MODEL_PATH}")
-        logger.info(f"✅ Modèle objets: {settings.OBJECT_MODEL_PATH}")
+        logger.info(f"✅ Modèle employés chargé: {settings.EMPLOYEE_MODEL_PATH}")
+        logger.info(f"✅ Modèle objets chargé: {settings.OBJECT_MODEL_PATH}")
         
-        # Couleurs pour les classes
+        # Couleurs pour l'affichage
         self.colors = {
             "employé": (0, 255, 0),
-            "employé actif": (0, 200, 0),
-            "employé inactif": (0, 150, 0),
-            "client": (255, 0, 0),
-            "produit": (0, 0, 255),
             "machine": (255, 255, 0),
-            "table": (255, 165, 0),
+            "produit": (0, 0, 255),
+            "default": (128, 128, 128)
         }
     
     def get_employee_model(self):
-        """Retourner le modèle employé"""
         return self.employee_model
     
     def get_object_model(self):
-        """Retourner le modèle objet"""
         return self.object_model
     
     def detect_frame(
         self,
         frame: np.ndarray,
-        conf: float = 0.5,
-        model_type: Literal["employees", "objects", "both"] = "both"
+        conf: float = 0.25, # Lowered to catch occluded parts
+        model_type: Literal["employees", "objects", "both"] = "both",
+        frame_idx: int = 0
     ) -> List[Detection]:
         """
-        Détecter objets dans une frame
-        
-        Args:
-            frame: Frame OpenCV (BGR)
-            conf: Seuil de confiance
-            model_type: Type de modèle
-        
-        Returns:
-            Liste de détections
+        Détection avec ByteTrack activé et Coordonnées Normalisées.
         """
         detections = []
+        h, w = frame.shape[:2]
+
+        # ✅ LOGIQUE DE DÉTECTION :
+        # On lance toujours le modèle employé pour capturer les humains, 
+        # même en mode 'objects', car on a besoin de leurs données pour le comptage.
         
-        # Détection employés
-        if model_type in ["employees", "both"]:
-            results_emp = self.employee_model(frame, conf=conf, verbose=False)
-            detections.extend(self._parse_results(results_emp, "employee"))
-        
-        # Détection objets
-        if model_type in ["objects", "both"]:
-            results_obj = self.object_model(frame, conf=conf, verbose=False)
-            detections.extend(self._parse_results(results_obj, "object"))
-        
-        return detections
-    
-    def _parse_results(self, results, source: str) -> List[Detection]:
-        """Parser les résultats YOLO"""
-        detections = []
-        
-        if not results or len(results) == 0:
-            return detections
-        
-        result = results[0]
-        
-        if result.boxes is None or len(result.boxes) == 0:
-            return detections
-        
-        for box in result.boxes:
-            cls_id = int(box.cls[0])
-            class_name = result.names[cls_id]
-            
-            # Filtrer classes médicales
-            if self._is_medical_class(class_name):
-                continue
-            
-            confidence = float(box.conf[0])
-            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-            
-            detection = Detection(
-                class_name=class_name,
-                confidence=confidence,
-                bbox=BoundingBox(
-                    x=float(x1),
-                    y=float(y1),
-                    width=float(x2 - x1),
-                    height=float(y2 - y1)
-                ),
-                source=source
+        run_employee = True # Always track humans for occupancy counting
+        run_object = model_type in ("objects", "both")
+
+        # 1️⃣ Employee Model (Runs for all modes to ensure human detection)
+        if run_employee:
+            results = self.employee_model.track(
+                frame, 
+                conf=conf, 
+                iou=0.6, 
+                verbose=False,
+                persist=True,     # ✅ CRUCIAL for ByteTrack memory
+                tracker="bytetrack.yaml", 
+                max_det=100       # Increased to catch everyone in crowded scenes
             )
-            detections.append(detection)
-        
+            
+            for result in results:
+                if result.boxes is None: 
+                    continue
+                
+                for box in result.boxes:
+                    class_id = int(box.cls[0])
+                    class_name = self.employee_model.names[class_id]
+                    
+                    # Filter medical classes if needed
+                    if class_name.lower() in {c.lower() for c in self.MEDICAL_CLASSES}:
+                        continue
+                        
+                    confidence = float(box.conf[0])
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    
+                    track_id = None
+                    if hasattr(box, 'id') and box.id is not None:
+                        try:
+                            track_id = int(box.id[0].cpu().item())
+                        except Exception:
+                            pass
+                    
+                    # ✅ NORMALIZATION (0.0 to 1.0) for Zone Logic
+                    detections.append(Detection(
+                        class_name=class_name, 
+                        confidence=confidence,
+                        bbox=BoundingBox(
+                            x=float(x1)/w, 
+                            y=float(y1)/h, 
+                            width=float(x2-x1)/w, 
+                            height=float(y2-y1)/h
+                        ),
+                        source="employee", 
+                        track_id=track_id
+                    ))
+
+        # 2️⃣ Object Model (For machines/products, filtering out humans to avoid duplicates)
+        if run_object:
+            results = self.object_model.track(
+                frame, 
+                conf=conf, 
+                iou=0.6, 
+                verbose=False,
+                persist=True, 
+                tracker="bytetrack.yaml", 
+                max_det=100
+            )
+            
+            for result in results:
+                if result.boxes is None: 
+                    continue
+                
+                for box in result.boxes:
+                    cls_id = int(box.cls[0])
+                    cls_raw = self.object_model.names[cls_id]
+                    cls_lower = cls_raw.lower()
+                    
+                    # 🛡️ Skip humans/medical as they are handled by employee_model
+                    if cls_lower in self.EMPLOYEE_NAMES or cls_lower in {c.lower() for c in self.MEDICAL_CLASSES}:
+                        continue
+                        
+                    confidence = float(box.conf[0])
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    
+                    track_id = None
+                    if hasattr(box, 'id') and box.id is not None:
+                        try:
+                            track_id = int(box.id[0].cpu().item())
+                        except Exception:
+                            pass
+                    
+                    detections.append(Detection(
+                        class_name=cls_raw, 
+                        confidence=confidence,
+                        bbox=BoundingBox(
+                            x=float(x1)/w, 
+                            y=float(y1)/h, 
+                            width=float(x2-x1)/w, 
+                            height=float(y2-y1)/h
+                        ),
+                        source="object", 
+                        track_id=track_id
+                    ))
+
         return detections
-    
-    def _is_medical_class(self, class_name: str) -> bool:
-        """Vérifier si c'est une classe médicale"""
-        return class_name.lower() in self.MEDICAL_CLASSES
     
     def get_color(self, class_name: str) -> tuple:
-        """Obtenir couleur pour une classe"""
+        """Retourne la couleur associée à une classe"""
         for key, color in self.colors.items():
             if key in class_name.lower():
                 return color
-        return (128, 128, 128)
+        return self.colors["default"]

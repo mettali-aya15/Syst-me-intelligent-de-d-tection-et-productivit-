@@ -1,0 +1,224 @@
+[
+  {
+    "id": 1,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00000.jpg"
+    }
+  },
+  {
+    "id": 2,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00001.jpg"
+    }
+  },
+  {
+    "id": 3,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00002.jpg"
+    }
+  },
+  {
+    "id": 4,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00004.jpg"
+    }
+  },
+  {
+    "id": 5,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00005.jpg"
+    }
+  },
+  {
+    "id": 6,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00006.jpg"
+    }
+  },
+  {
+    "id": 7,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00007.jpg"
+    }
+  },
+  {
+    "id": 8,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00008.jpg"
+    }
+  },
+  {
+    "id": 9,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00010.jpg"
+    }
+  },
+  {
+    "id": 10,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00011.jpg"
+    }
+  },
+  {
+    "id": 11,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/arret_machine_frame_00012.jpg"
+    }
+  },
+  {
+    "id": 12,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00000.jpg"
+    }
+  },
+  {
+    "id": 13,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00001.jpg"
+    }
+  },
+  {
+    "id": 14,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00002.jpg"
+    }
+  },
+  {
+    "id": 15,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00005.jpg"
+    }
+  },
+  {
+    "id": 16,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00006.jpg"
+    }
+  },
+  {
+    "id": 17,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00023.jpg"
+    }
+  },
+  {
+    "id": 18,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00053.jpg"
+    }
+  },
+  {
+    "id": 19,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00054.jpg"
+    }
+  },
+  {
+    "id": 20,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00059.jpg"
+    }
+  },
+  {
+    "id": 21,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/factory_frame_00060.jpg"
+    }
+  },
+  {
+    "id": 22,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00000.jpg"
+    }
+  },
+  {
+    "id": 23,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00001.jpg"
+    }
+  },
+  {
+    "id": 24,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00003.jpg"
+    }
+  },
+  {
+    "id": 25,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00004.jpg"
+    }
+  },
+  {
+    "id": 26,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00005.jpg"
+    }
+  },
+  {
+    "id": 27,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00008.jpg"
+    }
+  },
+  {
+    "id": 28,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00009.jpg"
+    }
+  },
+  {
+    "id": 29,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00010.jpg"
+    }
+  },
+  {
+    "id": 30,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00012.jpg"
+    }
+  },
+  {
+    "id": 31,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/Lean-manufacturing_frame_00014.jpg"
+    }
+  },
+  {
+    "id": 32,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/workflow-factory_frame_00000.jpg"
+    }
+  },
+  {
+    "id": 33,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/workflow-factory_frame_00001.jpg"
+    }
+  },
+  {
+    "id": 34,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/workflow-factory_frame_00002.jpg"
+    }
+  },
+  {
+    "id": 35,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/workflow-factory_frame_00003.jpg"
+    }
+  },
+  {
+    "id": 36,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/workflow-factory_frame_00004.jpg"
+    }
+  },
+  {
+    "id": 37,
+    "data": {
+      "image": "http://127.0.0.1:8000/images/workflow-factory_frame_00005.jpg"
+    }
+  }
+]

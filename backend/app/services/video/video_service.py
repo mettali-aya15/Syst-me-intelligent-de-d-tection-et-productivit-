@@ -96,54 +96,116 @@ class VideoService:
     
     @staticmethod
     def count_unique_objects_smart(frames_detections: List[FrameDetection], line_counts: dict = None) -> dict:
-        """Comptage intelligent avec support ligne"""
+        """
+        Méthode Finale : Zone-Based Occupancy Counting (Sans dépendance aux Track IDs)
+        Compte le nombre maximum d'employés présents simultanément dans des zones définies
+        en utilisant un algorithme anti-chevauchement (NMS).
+        """
         if not frames_detections:
             return {}
         
         unique_objects = {}
         
-        # Utiliser comptage par ligne pour produits
+        # ✅ 1. PRODUITS : Via Lignes (Inchangé)
         if line_counts and "produit" in line_counts:
-            total_produits = line_counts["produit"]["TOTAL"]
-            unique_objects["produit"] = total_produits
-            logger.info(f"📏 produit: Ligne IN={line_counts['produit']['IN']}, OUT={line_counts['produit']['OUT']}, TOTAL={total_produits}")
+            unique_objects["produit"] = line_counts["produit"]["TOTAL"]
+            logger.info(f"📦 Produits (via Lignes): {unique_objects['produit']}")
+        else:
+            unique_objects["produit"] = 0
+
+        # ✅ 2. DÉFINITION DES ZONES (Exemple: Gauche et Droite)
+        # Ajustez ces bornes si votre caméra a une perspective différente
+        ZONES = {
+            "zone_gauche": {"x_min": 0.0, "x_max": 0.5, "y_min": 0.0, "y_max": 1.0},
+            "zone_droite": {"x_min": 0.5, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0}
+        }
         
-        # Méthode statistique pour les autres
-        class_counts_per_frame = defaultdict(list)
+        EMPLOYEE_TERMS = {'employé', 'employee actif', 'employee inactif'}
         
-        for frame_detection in frames_detections:
-            frame_counts = defaultdict(int)
-            for detection in frame_detection.detections:
-                frame_counts[detection.class_name] += 1
+        # Stockage pour chaque frame: { zone_name: count }
+        frame_zone_occupancy = []
+
+        for frame_det in frames_detections:
+            zone_counts = {z: 0 for z in ZONES}
             
-            for class_name, count in frame_counts.items():
-                class_counts_per_frame[class_name].append(count)
+            # Filtrer uniquement les employés
+            employee_dets = [d for d in frame_det.detections if d.class_name.lower() in EMPLOYEE_TERMS]
+            
+            # Pour chaque zone, compter les employés uniques non-chevauchants
+            for zone_name, bounds in ZONES.items():
+                zone_dets = []
+                for det in employee_dets:
+                    cx = det.bbox.x + (det.bbox.width / 2)
+                    cy = det.bbox.y + (det.bbox.height / 2)
+                    
+                    # Vérifier si le centre de la boîte est dans la zone
+                    if (bounds["x_min"] <= cx <= bounds["x_max"] and 
+                        bounds["y_min"] <= cy <= bounds["y_max"]):
+                        zone_dets.append(det)
+                
+                # ✅ ALGORITHME ANTI-CHEVAUCHEMENT (NMS Simplifié)
+                # Trier par confiance décroissante pour garder les meilleures détections
+                zone_dets.sort(key=lambda x: x.confidence, reverse=True)
+                
+                kept_dets = []
+                for det in zone_dets:
+                    is_overlapping = False
+                    d1_x1 = det.bbox.x
+                    d1_y1 = det.bbox.y
+                    d1_x2 = det.bbox.x + det.bbox.width
+                    d1_y2 = det.bbox.y + det.bbox.height
+                    
+                    for kept in kept_dets:
+                        k_x1 = kept.bbox.x
+                        k_y1 = kept.bbox.y
+                        k_x2 = kept.bbox.x + kept.bbox.width
+                        k_y2 = kept.bbox.y + kept.bbox.height
+                        
+                        # Calculer l'intersection (IoU)
+                        xx1 = max(d1_x1, k_x1)
+                        yy1 = max(d1_y1, k_y1)
+                        xx2 = min(d1_x2, k_x2)
+                        yy2 = min(d1_y2, k_y2)
+                        
+                        w = max(0, xx2 - xx1)
+                        h = max(0, yy2 - yy1)
+                        inter = w * h
+                        
+                        area1 = (d1_x2 - d1_x1) * (d1_y2 - d1_y1)
+                        area2 = (k_x2 - k_x1) * (k_y2 - k_y1)
+                        union = area1 + area2 - inter
+                        
+                        iou = inter / union if union > 0 else 0
+                        
+                        # Si chevauchement > 30%, on considère que c'est la même personne (doublon)
+                        if iou > 0.3: 
+                            is_overlapping = True
+                            break
+                    
+                    if not is_overlapping:
+                        kept_dets.append(det)
+                
+                zone_counts[zone_name] = len(kept_dets)
+            
+            frame_zone_occupancy.append(zone_counts)
+
+        # ✅ 3. CALCUL FINAL
+        # Le nombre d'employés est le MAXIMUM de personnes vues simultanément dans toutes les zones combinées
+        if frame_zone_occupancy:
+            max_employees_left = max([f["zone_gauche"] for f in frame_zone_occupancy])
+            max_employees_right = max([f["zone_droite"] for f in frame_zone_occupancy])
+            
+            # Total unique employees is the sum of max simultaneous in each disjoint zone
+            total_employees = max_employees_left + max_employees_right
+        else:
+            total_employees = 0
         
-        for class_name, counts in class_counts_per_frame.items():
-            if class_name in unique_objects:
-                continue  # Déjà compté par ligne
-            
-            non_zero = [c for c in counts if c > 0]
-            if not non_zero:
-                continue
-            
-            sorted_counts = sorted(non_zero, reverse=True)
-            top_20_percent = max(1, len(sorted_counts) // 5)
-            top_values = sorted_counts[:top_20_percent]
-            
-            median_idx = len(top_values) // 2
-            if len(top_values) % 2 == 0:
-                result = (top_values[median_idx - 1] + top_values[median_idx]) / 2
-            else:
-                result = top_values[median_idx]
-            
-            unique_objects[class_name] = int(round(result))
-            logger.info(f"📦 {class_name}: TOP20% médiane = {result:.1f} → {int(round(result))}")
+        unique_objects['employé'] = total_employees
         
-        logger.info(f"🎯 Final: {unique_objects}")
+        logger.info(f"👥 Employés Uniques (Zone Occupancy): {total_employees}")
+        logger.info(f"   Max Gauche: {max_employees_left if frame_zone_occupancy else 0}, Max Droite: {max_employees_right if frame_zone_occupancy else 0}")
         
         return unique_objects
-    
     @staticmethod
     async def process_video(
         video_id: str,
@@ -186,8 +248,7 @@ class VideoService:
             
             processor = FrameProcessor()
             
-            # Utiliser le comptage par ligne adaptatif
-            # Utiliser la nouvelle méthode adaptative
+            # Utiliser le comptage par ligne adaptatif (Méthode de FrameProcessor)
             frames_detections, metadata, line_counts = processor.process_video_with_line_counting(
                 video_path=str(video.file_path),
                 output_path=str(annotated_path),

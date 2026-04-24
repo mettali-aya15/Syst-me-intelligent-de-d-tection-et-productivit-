@@ -1,55 +1,48 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modèles Pydantic pour les détections
+Modèles de détection Pydantic
 """
 
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime
-from typing import List, Optional
-from bson import ObjectId
+from pydantic import BaseModel, Field
+from typing import Optional, List
 
 
 class BoundingBox(BaseModel):
-    """Boîte englobante (coordonnées normalisées)"""
+    """Bounding box normalisée (0-1)"""
     x: float = Field(..., ge=0, le=1)
     y: float = Field(..., ge=0, le=1)
     width: float = Field(..., ge=0, le=1)
     height: float = Field(..., ge=0, le=1)
+    
+    @property
+    def x1(self) -> float:
+        return self.x
+    
+    @property
+    def y1(self) -> float:
+        return self.y
+    
+    @property
+    def x2(self) -> float:
+        return self.x + self.width
+    
+    @property
+    def y2(self) -> float:
+        return self.y + self.height
 
 
 class Detection(BaseModel):
-    """Détection individuelle"""
+    """Détection d'un objet avec Track ID pour le suivi"""
     class_name: str
     confidence: float = Field(..., ge=0, le=1)
     bbox: BoundingBox
-    source: str
+    source: str = "unknown"  # 'employee_model' or 'object_model'
+    track_id: Optional[int] = None  # Crucial for ByteTrack
 
 
 class FrameDetection(BaseModel):
-    """Détections d'une frame"""
+    """Ensemble des détections pour une frame donnée"""
     frame_number: int
     timestamp: float
     detections: List[Detection]
-
-
-class VideoDetection(BaseModel):
-    """Détection enregistrée en base"""
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    
-    id: Optional[ObjectId] = Field(default=None, alias="_id")
-    video_id: ObjectId
-    frame_number: int
-    timestamp: float
-    class_name: str
-    confidence: float
-    bbox: BoundingBox
-    source: str
-    processed_at: datetime = Field(default_factory=datetime.now)
-
-
-class DetectionSummary(BaseModel):
-    """Résumé des détections"""
-    total_detections: int
-    by_class: dict
-    by_source: dict
