@@ -57,7 +57,7 @@ class YOLODetector:
     def detect_frame(
         self,
         frame: np.ndarray,
-        conf: float = 0.25, # Lowered to catch occluded parts
+        conf: float = 0.5, # Lowered to catch occluded parts
         model_type: Literal["employees", "objects", "both"] = "both",
         frame_idx: int = 0
     ) -> List[Detection]:
