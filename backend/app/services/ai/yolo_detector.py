@@ -20,24 +20,28 @@ logger = logging.getLogger(__name__)
 class YOLODetector:
     """Gestionnaire des modèles YOLO pour employés et objets"""
     
-    # Classes à ignorer (ex: contexte médical si non pertinent)
-    MEDICAL_CLASSES = {
-        'doctor', 'nurse', 'patient', 'wheelchair', 'hospital bed',
-        'stethoscope', 'syringe', 'medical mask', 'thermometer',
-        'médecin', 'infirmière', 'fauteuil roulant'
+    # ✅ Classes contextuelles à ignorer (de best_person.pt)
+    IGNORED_CLASSES = {
+        'porte verte',
+        'temps'
     }
     
-    # Noms propres d'employés (pour filtrage en mode 'objects' si nécessaire)
-    EMPLOYEE_NAMES: Set[str] = {'amir', 'seline', 'ali', 'adem', 'person'} 
+    # ✅ Noms propres d'employés (de best_person.pt)
+    EMPLOYEE_NAMES: Set[str] = {
+        'amelie', 'seline', 'ibtihel', 'ali', 'mohamed', 
+        'alena', 'adem', 'amir', 'sami', 'insaf', 'employe'
+    }
     
     def __init__(self):
         logger.info("🔧 Initialisation YOLODetector...")
         
         # Chargement des modèles
-        self.employee_model = YOLO(str(settings.EMPLOYEE_MODEL_PATH))
-        self.object_model = YOLO(str(settings.OBJECT_MODEL_PATH))
+        # best_person.pt → Reconnaissance par NOM (amelie, seline, ali, etc.)
+        # best_objects.pt → Détection OBJETS + ÉTATS (produit, machine, employé, employé actif, etc.)
+        self.employee_model = YOLO(str(settings.EMPLOYEE_MODEL_PATH))  # best_person.pt
+        self.object_model = YOLO(str(settings.OBJECT_MODEL_PATH))      # best_objects.pt
         
-        logger.info(f"✅ Modèle employés chargé: {settings.EMPLOYEE_MODEL_PATH}")
+        logger.info(f"✅ Modèle employés (noms) chargé: {settings.EMPLOYEE_MODEL_PATH}")
         logger.info(f"✅ Modèle objets chargé: {settings.OBJECT_MODEL_PATH}")
         
         # Couleurs pour l'affichage
@@ -57,33 +61,35 @@ class YOLODetector:
     def detect_frame(
         self,
         frame: np.ndarray,
-        conf: float = 0.5, # Lowered to catch occluded parts
+        conf: float = 0.5,
         model_type: Literal["employees", "objects", "both"] = "both",
         frame_idx: int = 0
     ) -> List[Detection]:
         """
         Détection avec ByteTrack activé et Coordonnées Normalisées.
+        
+        LOGIQUE CORRIGÉE:
+        - model_type="employees" → Utiliser best_person.pt (noms propres)
+        - model_type="objects" → Utiliser best_objects.pt (tout : produit, machine, employé, etc.)
+        - model_type="both" → Utiliser les 2 modèles
         """
         detections = []
         h, w = frame.shape[:2]
 
-        # ✅ LOGIQUE DE DÉTECTION :
-        # On lance toujours le modèle employé pour capturer les humains, 
-        # même en mode 'objects', car on a besoin de leurs données pour le comptage.
-        
-        run_employee = True # Always track humans for occupancy counting
-        run_object = model_type in ("objects", "both")
+        # ✅ DÉCISION : Quel modèle utiliser
+        run_employee_names = model_type in ("employees", "both")  # best_person.pt
+        run_objects = model_type in ("objects", "both")           # best_objects.pt
 
-        # 1️⃣ Employee Model (Runs for all modes to ensure human detection)
-        if run_employee:
+        # 1️⃣ Employee Names Model (best_person.pt) - Reconnaissance par NOM
+        if run_employee_names:
             results = self.employee_model.track(
                 frame, 
                 conf=conf, 
                 iou=0.6, 
                 verbose=False,
-                persist=True,     # ✅ CRUCIAL for ByteTrack memory
+                persist=True,
                 tracker="bytetrack.yaml", 
-                max_det=100       # Increased to catch everyone in crowded scenes
+                max_det=100
             )
             
             for result in results:
@@ -94,8 +100,8 @@ class YOLODetector:
                     class_id = int(box.cls[0])
                     class_name = self.employee_model.names[class_id]
                     
-                    # Filter medical classes if needed
-                    if class_name.lower() in {c.lower() for c in self.MEDICAL_CLASSES}:
+                    # ✅ Filtrer classes contextuelles
+                    if class_name.lower() in {c.lower() for c in self.IGNORED_CLASSES}:
                         continue
                         
                     confidence = float(box.conf[0])
@@ -108,7 +114,6 @@ class YOLODetector:
                         except Exception:
                             pass
                     
-                    # ✅ NORMALIZATION (0.0 to 1.0) for Zone Logic
                     detections.append(Detection(
                         class_name=class_name, 
                         confidence=confidence,
@@ -118,12 +123,12 @@ class YOLODetector:
                             width=float(x2-x1)/w, 
                             height=float(y2-y1)/h
                         ),
-                        source="employee", 
+                        source="employee_name",  # ✅ Source = noms propres
                         track_id=track_id
                     ))
 
-        # 2️⃣ Object Model (For machines/products, filtering out humans to avoid duplicates)
-        if run_object:
+        # 2️⃣ Objects Model (best_objects.pt) - Détection TOUT (produit, machine, employé, etc.)
+        if run_objects:
             results = self.object_model.track(
                 frame, 
                 conf=conf, 
@@ -143,9 +148,15 @@ class YOLODetector:
                     cls_raw = self.object_model.names[cls_id]
                     cls_lower = cls_raw.lower()
                     
-                    # 🛡️ Skip humans/medical as they are handled by employee_model
-                    if cls_lower in self.EMPLOYEE_NAMES or cls_lower in {c.lower() for c in self.MEDICAL_CLASSES}:
-                        continue
+                    # ✅ PAS DE FILTRAGE en mode "objects"
+                    # On veut TOUT : produit, machine, employé, employé actif, etc.
+                    
+                    # ✅ FILTRAGE SEULEMENT en mode "both" pour éviter doublons
+                    if model_type == "both":
+                        # Si on utilise les 2 modèles, ignorer les classes "employé" de best_objects.pt
+                        # car elles seront détectées par best_person.pt avec les noms
+                        if cls_lower in {'employé', 'employé actif', 'employé inactif'}:
+                            continue
                         
                     confidence = float(box.conf[0])
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
@@ -166,7 +177,7 @@ class YOLODetector:
                             width=float(x2-x1)/w, 
                             height=float(y2-y1)/h
                         ),
-                        source="object", 
+                        source="object",  # ✅ Source = best_objects.pt
                         track_id=track_id
                     ))
 

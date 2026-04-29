@@ -97,113 +97,321 @@ class VideoService:
     @staticmethod
     def count_unique_objects_smart(frames_detections: List[FrameDetection], line_counts: dict = None) -> dict:
         """
-        Méthode Finale : Zone-Based Occupancy Counting (Sans dépendance aux Track IDs)
-        Compte le nombre maximum d'employés présents simultanément dans des zones définies
-        en utilisant un algorithme anti-chevauchement (NMS).
+        Comptage intelligent avec SAFEGUARD GLOBAL
+        - Produits : Via lignes (seulement si détectés)
+        - Employés (best_objects.pt) : Via zones + NMS (seulement si détectés)
+        - Noms (best_person.pt) : 1 nom = 1 personne (forcé à 1)
+        - Autres : Via statistique SEULEMENT si détectés
         """
         if not frames_detections:
             return {}
         
         unique_objects = {}
         
-        # ✅ 1. PRODUITS : Via Lignes (Inchangé)
-        if line_counts and "produit" in line_counts:
-            unique_objects["produit"] = line_counts["produit"]["TOTAL"]
-            logger.info(f"📦 Produits (via Lignes): {unique_objects['produit']}")
-        else:
-            unique_objects["produit"] = 0
+        # ✅ ÉTAPE 0 : INVENTAIRE COMPLET DES CLASSES DÉTECTÉES
+        detected_classes = set()
+        for frame_det in frames_detections:
+            for detection in frame_det.detections:
+                detected_classes.add(detection.class_name.lower())
+        
+        logger.info(f"🔍 Classes détectées dans la vidéo : {detected_classes}")
+        
+        # ✅ 1. PRODUITS : Via Lignes SEULEMENT SI DÉTECTÉS
+        if 'produit' in detected_classes:
+            if line_counts and "produit" in line_counts:
+                product_count = line_counts["produit"]["TOTAL"]
+                unique_objects["produit"] = product_count
+                logger.info(f"📦 Produits (via Lignes): {product_count}")
+            else:
+                # Comptage manuel par IDs
+                product_ids = set()
+                for frame_det in frames_detections:
+                    for det in frame_det.detections:
+                        if det.class_name.lower() == 'produit' and det.track_id is not None:
+                            product_ids.add(det.track_id)
+                if len(product_ids) > 0:
+                    unique_objects["produit"] = len(product_ids)
+                    logger.info(f"📦 Produits (comptage manuel): {len(product_ids)}")
 
-        # ✅ 2. DÉFINITION DES ZONES (Exemple: Gauche et Droite)
-        # Ajustez ces bornes si votre caméra a une perspective différente
+        # ✅ 2. EMPLOYÉS (best_objects.pt) : COMPTAGE PAR ZONES + NMS
         ZONES = {
             "zone_gauche": {"x_min": 0.0, "x_max": 0.5, "y_min": 0.0, "y_max": 1.0},
             "zone_droite": {"x_min": 0.5, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0}
         }
-        
-        EMPLOYEE_TERMS = {'employé', 'employee actif', 'employee inactif'}
-        
-        # Stockage pour chaque frame: { zone_name: count }
-        frame_zone_occupancy = []
 
+        EMPLOYEE_TERMS = {'employé', 'employé actif', 'employé inactif'}
+
+        has_employees = any(
+            any(term in class_name for term in EMPLOYEE_TERMS)
+            for class_name in detected_classes
+        )
+
+        if has_employees:
+            # ========== COMPTAGE TOTAL ==========
+            frame_zone_occupancy_total = []
+
+            for frame_det in frames_detections:
+                zone_counts = {z: 0 for z in ZONES}
+                
+                employee_dets = []
+                for d in frame_det.detections:
+                    class_lower = d.class_name.lower()
+                    if any(term in class_lower for term in EMPLOYEE_TERMS):
+                        employee_dets.append(d)
+                
+                for zone_name, bounds in ZONES.items():
+                    zone_dets = []
+                    for det in employee_dets:
+                        cx = det.bbox.x + (det.bbox.width / 2)
+                        cy = det.bbox.y + (det.bbox.height / 2)
+                        
+                        if (bounds["x_min"] <= cx <= bounds["x_max"] and 
+                            bounds["y_min"] <= cy <= bounds["y_max"]):
+                            zone_dets.append(det)
+                    
+                    # NMS
+                    zone_dets.sort(key=lambda x: x.confidence, reverse=True)
+                    
+                    kept_dets = []
+                    for det in zone_dets:
+                        is_overlapping = False
+                        d1_x1 = det.bbox.x
+                        d1_y1 = det.bbox.y
+                        d1_x2 = det.bbox.x + det.bbox.width
+                        d1_y2 = det.bbox.y + det.bbox.height
+                        
+                        for kept in kept_dets:
+                            k_x1 = kept.bbox.x
+                            k_y1 = kept.bbox.y
+                            k_x2 = kept.bbox.x + kept.bbox.width
+                            k_y2 = kept.bbox.y + kept.bbox.height
+                            
+                            xx1 = max(d1_x1, k_x1)
+                            yy1 = max(d1_y1, k_y1)
+                            xx2 = min(d1_x2, k_x2)
+                            yy2 = min(d1_y2, k_y2)
+                            
+                            w = max(0, xx2 - xx1)
+                            h = max(0, yy2 - yy1)
+                            inter = w * h
+                            
+                            area1 = (d1_x2 - d1_x1) * (d1_y2 - d1_y1)
+                            area2 = (k_x2 - k_x1) * (k_y2 - k_y1)
+                            union = area1 + area2 - inter
+                            
+                            iou = inter / union if union > 0 else 0
+                            
+                            if iou > 0.3:
+                                is_overlapping = True
+                                break
+                        
+                        if not is_overlapping:
+                            kept_dets.append(det)
+                    
+                    zone_counts[zone_name] = len(kept_dets)
+                
+                frame_zone_occupancy_total.append(zone_counts)
+
+            if frame_zone_occupancy_total:
+                max_total_left = max([f["zone_gauche"] for f in frame_zone_occupancy_total])
+                max_total_right = max([f["zone_droite"] for f in frame_zone_occupancy_total])
+                total_employees = max_total_left + max_total_right
+            else:
+                total_employees = 0
+            
+            unique_objects['employé'] = total_employees
+            logger.info(f"👥 employé (TOTAL): {total_employees}")
+            logger.info(f"   Max Gauche: {max_total_left if frame_zone_occupancy_total else 0}, Max Droite: {max_total_right if frame_zone_occupancy_total else 0}")
+            
+            # ========== COMPTAGE INACTIFS ==========
+            if 'employé inactif' in detected_classes:
+                frame_zone_occupancy_inactive = []
+
+                for frame_det in frames_detections:
+                    zone_counts = {z: 0 for z in ZONES}
+                    
+                    inactive_dets = [d for d in frame_det.detections 
+                                    if d.class_name.lower() == 'employé inactif']
+                    
+                    for zone_name, bounds in ZONES.items():
+                        zone_dets = []
+                        for det in inactive_dets:
+                            cx = det.bbox.x + (det.bbox.width / 2)
+                            cy = det.bbox.y + (det.bbox.height / 2)
+                            
+                            if (bounds["x_min"] <= cx <= bounds["x_max"] and 
+                                bounds["y_min"] <= cy <= bounds["y_max"]):
+                                zone_dets.append(det)
+                        
+                        zone_dets.sort(key=lambda x: x.confidence, reverse=True)
+                        
+                        kept_dets = []
+                        for det in zone_dets:
+                            is_overlapping = False
+                            d1_x1 = det.bbox.x
+                            d1_y1 = det.bbox.y
+                            d1_x2 = det.bbox.x + det.bbox.width
+                            d1_y2 = det.bbox.y + det.bbox.height
+                            
+                            for kept in kept_dets:
+                                k_x1 = kept.bbox.x
+                                k_y1 = kept.bbox.y
+                                k_x2 = kept.bbox.x + kept.bbox.width
+                                k_y2 = kept.bbox.y + kept.bbox.height
+                                
+                                xx1 = max(d1_x1, k_x1)
+                                yy1 = max(d1_y1, k_y1)
+                                xx2 = min(d1_x2, k_x2)
+                                yy2 = min(d1_y2, k_y2)
+                                
+                                w = max(0, xx2 - xx1)
+                                h = max(0, yy2 - yy1)
+                                inter = w * h
+                                
+                                area1 = (d1_x2 - d1_x1) * (d1_y2 - d1_y1)
+                                area2 = (k_x2 - k_x1) * (k_y2 - k_y1)
+                                union = area1 + area2 - inter
+                                
+                                iou = inter / union if union > 0 else 0
+                                
+                                if iou > 0.3:
+                                    is_overlapping = True
+                                    break
+                            
+                            if not is_overlapping:
+                                kept_dets.append(det)
+                        
+                        zone_counts[zone_name] = len(kept_dets)
+                    
+                    frame_zone_occupancy_inactive.append(zone_counts)
+
+                if frame_zone_occupancy_inactive:
+                    max_inactive_left = max([f["zone_gauche"] for f in frame_zone_occupancy_inactive])
+                    max_inactive_right = max([f["zone_droite"] for f in frame_zone_occupancy_inactive])
+                    total_inactive = max_inactive_left + max_inactive_right
+                else:
+                    total_inactive = 0
+                
+                if total_inactive > 0:
+                    unique_objects['employé inactif'] = total_inactive
+                    logger.info(f"👥 employé inactif: {total_inactive} (Gauche: {max_inactive_left}, Droite: {max_inactive_right})")
+                
+                total_active = total_employees - total_inactive
+                if total_active > 0:
+                    unique_objects['employé actif'] = total_active
+                    logger.info(f"👥 employé actif (calculé): {total_active} = {total_employees} - {total_inactive}")
+            
+            elif 'employé actif' in detected_classes:
+                if total_employees > 0:
+                    unique_objects['employé actif'] = total_employees
+                    logger.info(f"👥 employé actif (classe détectée): {total_employees}")
+            else:
+                logger.info(f"👥 Pas de sous-classes employé (actif/inactif) détectées")
+        
+        # ✅ 3. NOMS D'EMPLOYÉS (best_person.pt) : 1 NOM = 1 PERSONNE (FORCÉ À 1)
+        EMPLOYEE_NAMES = {
+            'amelie', 'seline', 'ibtihel', 'ali', 'mohamed', 
+            'alena', 'adem', 'amir', 'sami', 'insaf', 'employe'
+        }
+        
+        # Détecter quels noms sont présents
+        detected_names = set()
+        total_unique_employees = 0
+        
         for frame_det in frames_detections:
-            zone_counts = {z: 0 for z in ZONES}
-            
-            # Filtrer uniquement les employés
-            employee_dets = [d for d in frame_det.detections if d.class_name.lower() in EMPLOYEE_TERMS]
-            
-            # Pour chaque zone, compter les employés uniques non-chevauchants
-            for zone_name, bounds in ZONES.items():
-                zone_dets = []
-                for det in employee_dets:
-                    cx = det.bbox.x + (det.bbox.width / 2)
-                    cy = det.bbox.y + (det.bbox.height / 2)
-                    
-                    # Vérifier si le centre de la boîte est dans la zone
-                    if (bounds["x_min"] <= cx <= bounds["x_max"] and 
-                        bounds["y_min"] <= cy <= bounds["y_max"]):
-                        zone_dets.append(det)
-                
-                # ✅ ALGORITHME ANTI-CHEVAUCHEMENT (NMS Simplifié)
-                # Trier par confiance décroissante pour garder les meilleures détections
-                zone_dets.sort(key=lambda x: x.confidence, reverse=True)
-                
-                kept_dets = []
-                for det in zone_dets:
-                    is_overlapping = False
-                    d1_x1 = det.bbox.x
-                    d1_y1 = det.bbox.y
-                    d1_x2 = det.bbox.x + det.bbox.width
-                    d1_y2 = det.bbox.y + det.bbox.height
-                    
-                    for kept in kept_dets:
-                        k_x1 = kept.bbox.x
-                        k_y1 = kept.bbox.y
-                        k_x2 = kept.bbox.x + kept.bbox.width
-                        k_y2 = kept.bbox.y + kept.bbox.height
-                        
-                        # Calculer l'intersection (IoU)
-                        xx1 = max(d1_x1, k_x1)
-                        yy1 = max(d1_y1, k_y1)
-                        xx2 = min(d1_x2, k_x2)
-                        yy2 = min(d1_y2, k_y2)
-                        
-                        w = max(0, xx2 - xx1)
-                        h = max(0, yy2 - yy1)
-                        inter = w * h
-                        
-                        area1 = (d1_x2 - d1_x1) * (d1_y2 - d1_y1)
-                        area2 = (k_x2 - k_x1) * (k_y2 - k_y1)
-                        union = area1 + area2 - inter
-                        
-                        iou = inter / union if union > 0 else 0
-                        
-                        # Si chevauchement > 30%, on considère que c'est la même personne (doublon)
-                        if iou > 0.3: 
-                            is_overlapping = True
-                            break
-                    
-                    if not is_overlapping:
-                        kept_dets.append(det)
-                
-                zone_counts[zone_name] = len(kept_dets)
-            
-            frame_zone_occupancy.append(zone_counts)
-
-        # ✅ 3. CALCUL FINAL
-        # Le nombre d'employés est le MAXIMUM de personnes vues simultanément dans toutes les zones combinées
-        if frame_zone_occupancy:
-            max_employees_left = max([f["zone_gauche"] for f in frame_zone_occupancy])
-            max_employees_right = max([f["zone_droite"] for f in frame_zone_occupancy])
-            
-            # Total unique employees is the sum of max simultaneous in each disjoint zone
-            total_employees = max_employees_left + max_employees_right
-        else:
-            total_employees = 0
+            for det in frame_det.detections:
+                class_lower = det.class_name.lower()
+                if det.source == "employee_name" and class_lower in EMPLOYEE_NAMES:
+                    detected_names.add(det.class_name)
         
-        unique_objects['employé'] = total_employees
+        logger.info(f"👤 Noms détectés : {detected_names}")
         
-        logger.info(f"👥 Employés Uniques (Zone Occupancy): {total_employees}")
-        logger.info(f"   Max Gauche: {max_employees_left if frame_zone_occupancy else 0}, Max Droite: {max_employees_right if frame_zone_occupancy else 0}")
+        # Compter chaque nom individuellement - FORCÉ À 1
+        for name in detected_names:
+            # Ne pas compter "employe" comme nom individuel
+            if name.lower() != 'employe':
+                # ✅ FORCER à 1 (1 nom = 1 personne unique)
+                unique_objects[name] = 1
+                total_unique_employees += 1
+                logger.info(f"👤 {name}: 1")
+        
+        # ✅ Ajouter le TOTAL "employe"
+        if total_unique_employees > 0:
+            unique_objects['employe'] = total_unique_employees
+            logger.info(f"👥 employe (TOTAL): {total_unique_employees}")
+        
+        # ✅ Traiter "porte verte" et "temps" séparément (objets contextuels)
+        contextual_objects = {'porte verte', 'porte_verte', 'temps', 'temp'}
+        
+        for frame_det in frames_detections:
+            for det in frame_det.detections:
+                class_lower = det.class_name.lower()
+                
+                # Si c'est porte verte ou temps
+                if det.source == "employee_name" and class_lower in contextual_objects:
+                    # Normaliser le nom
+                    if 'porte' in class_lower:
+                        normalized_name = 'porte verte'
+                    else:
+                        normalized_name = 'temps'
+                    
+                    # Ajouter si pas encore présent
+                    if normalized_name not in unique_objects:
+                        unique_objects[normalized_name] = 1
+                        logger.info(f"🏷️ {normalized_name}: 1 (objet contextuel)")
+        
+        # ✅ 4. AUTRES CLASSES (machines, tables, etc.) : COMPTAGE STATISTIQUE
+        class_counts_per_frame = defaultdict(list)
+        
+        for frame_detection in frames_detections:
+            frame_counts = defaultdict(int)
+            for detection in frame_detection.detections:
+                class_lower = detection.class_name.lower()
+                
+                # Exclure produits, employés et noms (déjà comptés)
+                if (class_lower not in EMPLOYEE_TERMS and 
+                    class_lower != 'produit' and 
+                    detection.source != "employee_name"):
+                    
+                    frame_counts[detection.class_name] += 1
+            
+            for class_name, count in frame_counts.items():
+                class_counts_per_frame[class_name].append(count)
+        
+        for class_name, counts in class_counts_per_frame.items():
+            if class_name in unique_objects:
+                continue
+            
+            class_lower = class_name.lower()
+            
+            if class_lower not in detected_classes:
+                logger.info(f"⚠️ Classe '{class_name}' dans comptage mais pas dans detected_classes - IGNORÉ")
+                continue
+            
+            non_zero = [c for c in counts if c > 0]
+            if not non_zero:
+                logger.info(f"⚠️ Classe '{class_name}' : aucune frame avec count > 0 - IGNORÉ")
+                continue
+            
+            sorted_counts = sorted(non_zero, reverse=True)
+            top_20_percent = max(1, len(sorted_counts) // 5)
+            top_values = sorted_counts[:top_20_percent]
+            
+            median_idx = len(top_values) // 2
+            if len(top_values) % 2 == 0:
+                result = (top_values[median_idx - 1] + top_values[median_idx]) / 2
+            else:
+                result = top_values[median_idx]
+            
+            final_count = int(round(result))
+            
+            if final_count > 0:
+                unique_objects[class_name] = final_count
+                logger.info(f"✅ {class_name}: {final_count}")
+            else:
+                logger.info(f"⚠️ Classe '{class_name}' : final_count = 0 - IGNORÉ")
+        
+        logger.info(f"🎯 Final: {unique_objects}")
         
         return unique_objects
     @staticmethod
@@ -248,7 +456,7 @@ class VideoService:
             
             processor = FrameProcessor()
             
-            # Utiliser le comptage par ligne adaptatif (Méthode de FrameProcessor)
+            # Utiliser le comptage par ligne adaptatif
             frames_detections, metadata, line_counts = processor.process_video_with_line_counting(
                 video_path=str(video.file_path),
                 output_path=str(annotated_path),
