@@ -147,3 +147,5 @@ temp/
 # === DOCUMENTATION BUILD ===
 docs/_build/
 site/backend/data/videos/ 
+
+backend/data.zip
