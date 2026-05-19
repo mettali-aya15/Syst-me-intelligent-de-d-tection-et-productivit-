@@ -149,3 +149,7 @@ docs/_build/
 site/backend/data/videos/ 
 
 backend/data.zip
+
+backend/data.zip
+backend/data/
+*.zip
