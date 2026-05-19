@@ -1,0 +1,75 @@
+<nav class="navbar">
+  <!-- 🏭 MARQUE (Gauche) -->
+  <a routerLink="/admin/dashboard" class="nav-brand">
+    <div class="brand-icon">
+      <i class="fas fa-industry"></i>
+    </div>
+    <span class="brand-text">CAMIA Factory</span>
+  </a>
+
+  <!-- 🔗 NAVIGATION (Centre) -->
+  <div class="nav-menu">
+    <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link">
+      <i class="fas fa-chart-line"></i>
+      <span>{{ 'nav.dashboard' | translate }}</span>
+    </a>
+    <a routerLink="/admin/kpi" routerLinkActive="active" class="nav-link">
+      <i class="fas fa-bullseye"></i>
+      <span>{{ 'nav.kpi' | translate }}</span>
+    </a>
+    <a routerLink="/admin/videos" routerLinkActive="active" class="nav-link">
+      <i class="fas fa-video"></i>
+      <span>{{ 'nav.videos' | translate }}</span>
+    </a>
+    <a routerLink="/admin/employees" routerLinkActive="active" class="nav-link">
+      <i class="fas fa-users"></i>
+      <span>{{ 'nav.employees' | translate }}</span>
+    </a>
+    <a routerLink="/admin/notifications" routerLinkActive="active" class="nav-link">
+      <i class="fas fa-bell"></i>
+      <span>{{ 'nav.notifications' | translate }}</span>
+      <span class="nav-link-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+    </a>
+  </div>
+
+  <!-- 👤 ACTIONS & PROFIL (Droite) -->
+  <div class="nav-actions">
+    <!-- ✅ DROPDOWN PROFIL -->
+    <div class="user-dropdown" [class.open]="dropdownOpen">
+      <div class="user-pill" (click)="toggleDropdown()">
+        <div class="avatar">{{ userInitials }}</div>
+        <span class="username">{{ userName }}</span>
+        <i class="fas fa-chevron-down dropdown-arrow"></i>
+      </div>
+
+      <!-- 📋 MENU DÉROULANT -->
+      <div class="dropdown-menu" *ngIf="dropdownOpen">
+        <div class="dropdown-header">
+          <div class="avatar-large">{{ userInitials }}</div>
+          <div class="user-info">
+            <div class="user-name">{{ userName }}</div>
+            <div class="user-email">{{ userEmail }}</div>
+          </div>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a routerLink="/admin/settings" class="dropdown-item" (click)="closeDropdown()">
+          <i class="fas fa-cog"></i>
+          <span>{{ 'nav.settings' | translate }}</span>
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <!-- 🚪 BOUTON DÉCONNEXION -->
+        <button class="dropdown-item logout" (click)="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>{{ 'nav.logout' | translate }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Overlay pour fermer le dropdown -->
+<div class="dropdown-overlay" *ngIf="dropdownOpen" (click)="closeDropdown()"></div>

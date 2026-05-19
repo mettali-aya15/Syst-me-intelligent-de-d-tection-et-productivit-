@@ -1,17 +1,320 @@
-<!--Admin Dashboard -->
-<nav class="navbar">
-  <div class="logo">
-    <a routerLink="/">Smart </a>
+<div class="dashboard-container">
+  
+  <!-- 🎬 BANNIÈRE AVEC UPLOAD -->
+  <div class="video-banner" *ngIf="currentVideo">
+    <div class="banner-content">
+      <div class="banner-icon">
+        <i class="fas fa-video"></i>
+      </div>
+      <div class="banner-info">
+        <div class="banner-label">{{ 'dashboard.video_analyzed' | translate }}</div>
+        <h2 class="banner-title">{{ currentVideo.filename }}</h2>
+        <div class="banner-meta">
+          <span class="meta-item">
+            <i class="far fa-calendar"></i>
+            {{ 'dashboard.uploaded_on' | translate }} {{ videoMetadata.uploadedAt }}
+          </span>
+          <span class="meta-item">
+            <i class="fas fa-bullseye"></i>
+            {{ totalDetections }} {{ 'dashboard.total_detections' | translate }}
+          </span>
+        </div>
+      </div>
+      <div class="banner-actions">
+        <button class="btn-upload" (click)="triggerFileUpload()">
+          <i class="fas fa-cloud-upload-alt"></i>
+          {{ 'dashboard.upload_video' | translate }}
+        </button>
+        <button class="btn-banner" (click)="navigateToVideo(currentVideo._id)">
+          <i class="fas fa-eye"></i>
+          {{ 'dashboard.view_video' | translate }}
+        </button>
+      </div>
+    </div>
   </div>
 
- <a routerLink="/machines">Machines</a>
-  <a routerLink="/emp-list">Employés</a>
-  <a routerLink="/production">Production</a>
-@if (isAdmin ){
- <a routerLink="/kpi">KPI</a>
-<a routerLink="/users">Gestion Utilisateurs</a>}
-   @if (isAdmin || isManager) {
- <a routerLink="/rapport">Rapports</a> }
-  <a routerLink="/notifications"  [class.has-notifications]="hasUnreadNotifications">🔔</a>
-  <button (click)="logout()">Logout</button>
-</nav>
+  <!-- ✅ INPUT FILE CACHÉ -->
+  <input 
+    type="file" 
+    #fileInput 
+    accept="video/*" 
+    (change)="onFileSelected($event)" 
+    style="display: none;">
+
+  <!-- ✅ BANNIÈRE UPLOAD (si aucune vidéo) -->
+  <div class="upload-banner" *ngIf="!currentVideo && !loading">
+    <div class="upload-content">
+      <div class="upload-icon">
+        <i class="fas fa-cloud-upload-alt"></i>
+      </div>
+      <h2>{{ 'dashboard.no_video' | translate }}</h2>
+      <p>{{ 'dashboard.upload_first' | translate }}</p>
+      <button class="btn-upload-large" (click)="triggerFileUpload()">
+        <i class="fas fa-plus-circle"></i>
+        {{ 'dashboard.upload_video' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ✅ BARRE DE PROGRESSION UPLOAD -->
+  <div class="upload-progress-bar" *ngIf="uploadProgress > 0 && uploadProgress < 100">
+    <div class="progress-header">
+      <span class="progress-label">
+        <i class="fas fa-upload"></i>
+        {{ 'dashboard.uploading' | translate }} : {{ selectedFileName }}
+      </span>
+      <span class="progress-percentage">{{ uploadProgress }}%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+    </div>
+  </div>
+
+  <!-- ✅ MESSAGE SUCCÈS UPLOAD -->
+  <div class="upload-success" *ngIf="uploadSuccess">
+    <i class="fas fa-check-circle"></i>
+    <span>{{ 'dashboard.upload_success' | translate }}</span>
+    <button class="btn-close" (click)="uploadSuccess = false">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- 📊 QUICK STATS -->
+  <div class="quick-stats" *ngIf="currentVideo">
+    <div class="stat-card">
+      <div class="stat-icon"><i></i></div>
+      <div class="stat-content">
+        <div class="stat-value">{{ totalVideos7Days }}</div>
+        <div class="stat-label">{{ 'dashboard.videos_7d' | translate }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon"><i></i></div>
+      <div class="stat-content">
+        <div class="stat-value">{{ totalDetections7Days | number }}</div>
+        <div class="stat-label">{{ 'dashboard.detections_7d' | translate }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon"><i></i></div>
+      <div class="stat-content">
+        <div class="stat-value">{{ detections.length }}</div>
+        <div class="stat-label">{{ 'dashboard.detected_classes' | translate }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon"><i></i></div>
+      <div class="stat-content">
+        <div class="stat-value">{{ videoMetadata.analysisTime }}</div>
+        <div class="stat-label">{{ 'dashboard.analysis_time' | translate }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📦 DÉTECTIONS -->
+  <div class="detections-summary" *ngIf="currentVideo">
+    <div class="summary-header">
+      <h3>
+        <i class="fas fa-list-ul"></i> 
+        {{ 'dashboard.detected_classes_video' | translate }}
+      </h3>
+      <div class="summary-total">
+        <span class="total-label">{{ 'dashboard.total' | translate }}</span>
+        <span class="total-value">{{ totalDetections }}</span>
+        <span class="total-unit">{{ 'dashboard.detections' | translate }}</span>
+      </div>
+    </div>
+
+    <div class="detections-grid">
+      <div class="detection-card" *ngFor="let det of detections">
+        <div class="detection-icon" [style.background]="det.color">
+          <i></i>
+        </div>
+        <div class="detection-info">
+          <div class="detection-label">{{ det.label }}</div>
+          <div class="detection-value">{{ det.value }}</div>
+          <div class="detection-bar">
+            <div class="bar-fill" 
+                 [style.width.%]="det.percentage" 
+                 [style.background]="det.color">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="no-detections" *ngIf="detections.length === 0">
+      <i class="fas fa-inbox"></i>
+      <p>{{ 'dashboard.no_detections' | translate }}</p>
+    </div>
+  </div>
+
+  <!-- 📈 GRAPHIQUES -->
+  <div class="charts-section" *ngIf="currentVideo">
+    
+    <div class="chart-box">
+      <div class="chart-box-header">
+        <h3>
+          <i class="fas fa-chart-pie"></i> 
+          {{ 'dashboard.distribution' | translate }}
+        </h3>
+        <span class="chart-info">{{ 'dashboard.class_distribution' | translate }}</span>
+      </div>
+      <div class="chart-canvas">
+        <canvas id="distributionChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item" *ngFor="let det of detections.slice(0, 5)">
+          <span class="legend-dot" [style.background]="det.color"></span>
+          <span class="legend-label">{{ det.label }}</span>
+          <span class="legend-value">{{ det.value }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-box-header">
+        <h3>
+          <i class="fas fa-chart-bar"></i> 
+          {{ 'dashboard.analysis_history' | translate }}
+        </h3>
+        <span class="chart-info">{{ 'dashboard.last_7_days' | translate }}</span>
+      </div>
+      <div class="chart-canvas">
+        <canvas id="timelineChart"></canvas>
+      </div>
+      <div class="chart-summary">
+        <div class="summary-stat">
+          <span class="stat-label">{{ 'dashboard.total_videos_7d' | translate }}</span>
+          <span class="stat-value">{{ totalVideos7Days }}</span>
+        </div>
+        <div class="summary-stat">
+          <span class="stat-label">{{ 'dashboard.total_detections_7d' | translate }}</span>
+          <span class="stat-value">{{ totalDetections7Days }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 📋 ANALYSES RÉCENTES -->
+  <div class="recent-analyses" *ngIf="currentVideo">
+    <div class="recent-header">
+      <h3>
+        <i class="fas fa-history"></i> 
+        {{ 'dashboard.recent_analyses' | translate }}
+      </h3>
+      <button class="btn-view-all" (click)="navigateToVideos()">
+        {{ 'dashboard.view_all_videos' | translate }}
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+
+    <div class="analyses-list" *ngIf="recentAnalyses.length > 0">
+      <div class="analysis-item" 
+           *ngFor="let analysis of recentAnalyses" 
+           (click)="navigateToVideo(analysis.id)">
+        <div class="analysis-icon">
+          <i class="fas fa-film"></i>
+        </div>
+        <div class="analysis-details">
+          <div class="analysis-name">{{ analysis.filename }}</div>
+          <div class="analysis-date">
+            <i class="far fa-clock"></i>
+            {{ analysis.date }}
+          </div>
+        </div>
+        <div class="analysis-stats">
+          <span class="stat-badge">
+            <i class="fas fa-bullseye"></i>
+            {{ analysis.detectionCount }} {{ 'dashboard.detections' | translate }}
+          </span>
+        </div>
+        <div class="analysis-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="no-analyses" *ngIf="recentAnalyses.length === 0">
+      <i class="fas fa-video-slash"></i>
+      <p>{{ 'dashboard.no_recent' | translate }}</p>
+    </div>
+  </div>
+
+  <!-- ⏱️ INFORMATIONS TEMPORELLES -->
+  <div class="metadata-section" *ngIf="currentVideo">
+    <h3 class="section-title">
+      <i class="far fa-clock"></i>
+      {{ 'dashboard.time_info' | translate }}
+    </h3>
+    
+    <div class="time-info-grid">
+      <div class="time-card">
+        <div class="time-icon">
+          <i class="fas fa-upload"></i>
+        </div>
+        <div class="time-content">
+          <div class="time-label">{{ 'dashboard.video_upload' | translate }}</div>
+          <div class="time-value">{{ videoMetadata.uploadedAt }}</div>
+        </div>
+      </div>
+
+      <div class="time-card">
+        <div class="time-icon">
+          <i class="fas fa-brain"></i>
+        </div>
+        <div class="time-content">
+          <div class="time-label">{{ 'dashboard.analysis_completed' | translate }}</div>
+          <div class="time-value">{{ videoMetadata.analyzedAt }}</div>
+        </div>
+      </div>
+
+      <div class="time-card">
+        <div class="time-icon">
+          <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="time-content">
+          <div class="time-label">{{ 'dashboard.analysis_time' | translate }}</div>
+          <div class="time-value">{{ videoMetadata.analysisTime }}</div>
+        </div>
+      </div>
+
+      <div class="time-card">
+        <div class="time-icon">
+          <i class="fas fa-image"></i>
+        </div>
+        <div class="time-content">
+          <div class="time-label">{{ 'dashboard.frames_analyzed' | translate }}</div>
+          <div class="time-value">{{ videoMetadata.frameCount | number }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📌 ACTIONS RAPIDES -->
+  <div class="quick-actions">
+    <button class="action-btn" (click)="refreshData()">
+      <i class="fas fa-sync-alt"></i>
+      <span>{{ 'common.refresh' | translate }}</span>
+    </button>
+    <button class="action-btn" (click)="navigateToVideos()">
+      <i class="fas fa-video"></i>
+      <span>{{ 'dashboard.all_videos' | translate }}</span>
+    </button>
+    <button class="action-btn" routerLink="/admin/kpi">
+      <i class="fas fa-chart-line"></i>
+      <span>{{ 'dashboard.view_kpi' | translate }}</span>
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>{{ 'common.loading' | translate }}</p>
+  </div>
+
+</div>

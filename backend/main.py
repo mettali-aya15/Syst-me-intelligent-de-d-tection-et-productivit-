@@ -8,32 +8,29 @@ CAMIA-Factory Backend
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
 import sys
 from pathlib import Path
-from datetime import datetime  # ✅ AJOUT IMPORTANT
+from datetime import datetime
 
-# Fix UTF-8 pour Windows (évite erreurs emojis)
 sys.stdout.reconfigure(encoding='utf-8')
-
-# Ajouter le dossier racine au path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.api.v1.routes.router import api_router
+from app.api.v1.routes import websocket_route  # ✅ CORRIGÉ
 from app.core.database import Database
 from app.core.config import settings
 
-# Créer le dossier logs AVANT logging
 Path("logs").mkdir(exist_ok=True)
 
-# Configuration logging (UTF-8)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('logs/app.log', encoding='utf-8')  # ✅ IMPORTANT
+        logging.FileHandler('logs/app.log', encoding='utf-8')
     ]
 )
 
@@ -44,22 +41,18 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Gestion du cycle de vie de l'application"""
     
-    # ========== STARTUP ==========
     logger.info("=" * 80)
     logger.info("DEMARRAGE CAMIA-FACTORY BACKEND")
     logger.info("=" * 80)
     
     try:
-        # Connexion MongoDB
         logger.info("🔌 Tentative de connexion MongoDB...")
         await Database.connect()
         
-        # ✅ AJOUT DE LOGS DÉTAILLÉS
         logger.info(f"✅ Database.client = {Database.client}")
         logger.info(f"✅ Database.db = {Database.db}")
         logger.info(f"✅ Database.db is None? {Database.db is None}")
         
-        # Test get_collection
         try:
             test_collection = Database.get_collection("video_uploads")
             logger.info(f"✅ Test get_collection réussi : {test_collection.name}")
@@ -68,7 +61,6 @@ async def lifespan(app: FastAPI):
         
         logger.info("✅ Base de données connectée")
         
-        # Vérifier dossiers
         required_dirs = [
             settings.UPLOAD_DIR,
             settings.ANNOTATED_DIR,
@@ -94,7 +86,6 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # ========== SHUTDOWN ==========
     logger.info("=" * 80)
     logger.info("ARRET CAMIA-FACTORY BACKEND")
     logger.info("=" * 80)
@@ -109,7 +100,6 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 80)
 
 
-# App FastAPI
 app = FastAPI(
     title="CAMIA-Factory API",
     version="1.0.0",
@@ -119,7 +109,6 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json"
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -132,8 +121,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routes
+data_path = Path(__file__).parent / "data"
+if data_path.exists():
+    app.mount("/data", StaticFiles(directory=str(data_path)), name="data")
+    logger.info(f"✅ Dossier 'data' monté en statique : {data_path}")
+else:
+    logger.warning(f"⚠️ Dossier 'data' introuvable : {data_path}")
+
 app.include_router(api_router, prefix="/api/v1")
+
+# ✅ Route WebSocket
+app.include_router(
+    websocket_route.router,  # ✅ CORRIGÉ
+    prefix="/api/v1",
+    tags=["WebSocket"]
+)
 
 
 @app.get("/")

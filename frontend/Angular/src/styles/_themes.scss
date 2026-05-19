@@ -1,0 +1,400 @@
+/* ========================================
+   THÈMES CLAIR ET SOMBRE - FICHIER UNIQUE
+   ======================================== */
+
+/* ========================================
+   THÈME CLAIR (PAR DÉFAUT)
+   ======================================== */
+:root,
+[data-theme="light"],
+body.light-theme {
+  /* Couleurs principales */
+  --primary-blue: #3B82F6;
+  --primary-hover: #2563EB;
+  --primary-light: rgba(59, 130, 246, 0.1);
+  
+  /* Palette secondaire */
+  --color-purple: #55566b;
+  --color-green: #10B981;
+  --color-orange: #F59E0B;
+  --color-cyan: #06B6D4;
+  --color-pink: #EC4899;
+  --color-red: #EF4444;
+  --color-blue: #3B82F6;
+  
+  /* Arrière-plans */
+  --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bg-secondary: #f8fafc;
+  --bg-card: rgba(199, 199, 207, 0.7);
+  --bg-navbar: rgba(255, 255, 255, 0.95);
+  --bg-white: #ffffff;
+  
+  /* Textes */
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --text-white: #ffffff;
+  
+  /* Bordures et ombres */
+  --border-light: rgba(255, 255, 255, 0.3);
+  --border-dark: rgba(0, 0, 0, 0.1);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.06);
+  --shadow-navbar: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-smooth: 0.25s ease;
+}
+
+/* ========================================
+   THÈME SOMBRE
+   ======================================== */
+[data-theme="dark"],
+body.dark-theme {
+
+  
+  /* Arrière-plans sombres */
+  --bg-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  --bg-secondary: #0f172a;
+  --bg-card: rgba(30, 41, 59, 0.8);
+  --bg-navbar: rgba(15, 23, 42, 0.95);
+  --bg-white: #1e293b;
+  
+  /* Textes clairs */
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-white: #F1F5F9;
+  
+  /* Bordures et ombres */
+  --border-light: rgba(148, 163, 184, 0.2);
+  --border-dark: rgba(255, 255, 255, 0.1);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-navbar: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   APPLICATION DES STYLES GLOBAUX
+   ======================================== */
+
+/* Body - Application du thème */
+body {
+  background: var(--bg-gradient);
+  color: var(--text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Conteneurs principaux */
+.dashboard-container,
+.settings-container,
+.kpi-dashboard,
+.notifications-page,
+.employees-container,
+.video-container {
+  background: transparent;
+}
+
+/* Cards - Glassmorphism */
+.video-banner,
+.upload-banner,
+.stat-card,
+.detections-summary,
+.chart-box,
+.recent-analyses,
+.metadata-section,
+.detection-card,
+.analysis-item,
+.time-card,
+.kpi-card,
+.gauge-card,
+.projection-banner,
+.notification-card,
+.employee-card,
+.settings-section,
+.page-header {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px) ;
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-card);
+}
+
+/* Textes */
+h1, h2, h3, h4, h5, h6,
+.stat-value,
+.detection-value,
+.time-value,
+.projection-value,
+.card-value,
+.analysis-name,
+.total-value,
+.notif-title,
+.setting-title h3,
+strong, b {
+  color: var(--text-primary);
+}
+
+p, span:not(.badge):not(.btn),
+label,
+.stat-label,
+.detection-label,
+.time-label,
+.projection-label,
+.card-label,
+.analysis-date,
+.meta-item,
+.notif-message {
+  color: var(--text-secondary);
+}
+
+.total-unit,
+.badge,
+small,
+.chart-info,
+.projection-period,
+.confidence-label {
+  color: var(--text-muted);
+}
+
+/* Boutons */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-upload,
+.btn-banner,
+.btn-test,
+.btn-refresh,
+.action-btn,
+.btn-export {
+  transition: var(--transition-smooth);
+}
+
+.btn-secondary,
+.action-btn {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  
+  &:hover {
+    background: var(--primary-light);
+    color: var(--primary-blue);
+    border-color: var(--primary-blue);
+  }
+}
+
+/* Formulaires */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="range"],
+select,
+textarea,
+.setting-select,
+.setting-input,
+.setting-range {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  
+  &:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+  
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+/* Select dropdown options */
+select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Navbar */
+.admin-navbar {
+  background: var(--bg-navbar);
+  box-shadow: var(--shadow-navbar);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.nav-link {
+  color: var(--text-muted);
+  
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-card);
+  }
+  
+  &.active {
+    background: var(--primary-blue);
+    color: white;
+  }
+}
+
+.brand-name {
+  color: var(--text-primary);
+}
+
+.brand-tagline {
+  color: var(--text-muted);
+}
+
+.user-name {
+  color: var(--text-primary);
+}
+
+.user-role {
+  color: var(--text-muted);
+}
+
+.user-profile {
+  background: var(--bg-white);
+  border: 1px solid var(--border-dark);
+  
+  &:hover {
+    background: var(--bg-card);
+    border-color: var(--primary-blue);
+  }
+}
+
+.btn-logout {
+  background: var(--bg-white) ;
+  border: 1px solid var(--border-dark) ;
+  color: var(--text-muted);
+  
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--color-red);
+    color: var(--color-red);
+  }
+}
+
+/* Notifications */
+.notification-card.is-new {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), var(--bg-card));
+  border-left: 5px solid var(--primary-blue);
+}
+
+/* Settings */
+.setting-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  
+  &:hover {
+    background: var(--bg-white);
+    border-color: var(--primary-blue);
+  }
+  
+  &.active {
+    border-color: var(--primary-blue);
+  }
+}
+
+.toggle-slider {
+  background: var(--border-dark);
+}
+
+input:checked + .toggle-slider {
+  background: var(--primary-blue);
+}
+
+.unsaved-changes {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--color-orange);
+  border: 1px solid var(--color-orange);
+}
+
+/* Charts */
+.chart-canvas canvas {
+  filter: brightness(1);
+}
+
+[data-theme="dark"] .chart-canvas canvas,
+body.dark-theme .chart-canvas canvas {
+  filter: brightness(0.9);
+}
+
+/* Loading overlay */
+.loading-overlay {
+  background: var(--bg-card);
+}
+
+.spinner {
+  border-color: var(--border-dark);
+  border-top-color: var(--primary-blue);
+}
+
+/* Transitions fluides */
+* {
+  transition: background-color 0.3s ease,
+              color 0.3s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* Pas de transition pour les pseudo-éléments d'icônes */
+.stat-icon::before,
+.detection-icon::before,
+.projection-icon::before {
+  transition: none;
+}
+
+/* Scrollbar - Thème clair */
+:root,
+[data-theme="light"],
+body.light-theme {
+  scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollbar - Thème sombre */
+[data-theme="dark"],
+body.dark-theme {
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 6px;
+  
+  &:hover {
+    background: var(--text-muted);
+  }
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+  .dashboard-container,
+  .settings-container,
+  .kpi-dashboard {
+    padding: 16px;
+  }
+}

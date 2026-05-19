@@ -1,0 +1,260 @@
+<div class="detail-container">
+  
+  <!-- BOUTON RETOUR -->
+  <button class="back-btn" (click)="goBack()">
+    <i class="fas fa-arrow-left"></i>
+    Retour à la liste
+  </button>
+
+  <!-- LOADING -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement de la vidéo...</p>
+    </div>
+  }
+
+  <!-- ERROR -->
+  @if (error && !loading) {
+    <div class="error-state">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h3>Erreur</h3>
+      <p>{{ error }}</p>
+      <button class="btn-primary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+        Retour à la liste
+      </button>
+    </div>
+  }
+
+  <!-- VIDEO LOADED -->
+  @if (video && !loading) {
+    <div class="detail-content">
+      
+      <!-- HEADER -->
+      <div class="detail-header">
+        <div class="header-left">
+          <h1>📹 {{ video.filename }}</h1>
+          <div class="header-meta">
+            <span class="status-badge" [ngClass]="getStatusClass(video.status)">
+              {{ getStatusLabel(video.status) }}
+            </span>
+            <span class="model-badge">
+              {{ getModelLabel(video.model_type) }}
+            </span>
+            <span class="date-badge">
+              <i class="fas fa-calendar"></i>
+              {{ video.created_at | date:'dd/MM/yyyy HH:mm' }}
+            </span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-danger" (click)="deleteVideo()">
+            <i class="fas fa-trash"></i>
+            Supprimer
+          </button>
+        </div>
+      </div>
+
+      <!-- GRID PRINCIPALE -->
+      <div class="detail-grid">
+        
+        <!-- COLONNE GAUCHE - VIDÉO -->
+        <div class="left-column">
+          
+          <!-- VIDEO PLAYER -->
+          <div class="video-card">
+            <div class="card-header">
+              <h3>🎬 Vidéo Annotée</h3>
+            </div>
+            <div class="video-player">
+              @if (videoUrl && video.status === 'completed') {
+                <video controls [src]="videoUrl" class="video-element">
+                  Votre navigateur ne supporte pas la lecture vidéo.
+                </video>
+              } @else if (video.status === 'processing' || video.status === 'analyzing') {
+                <div class="video-placeholder processing">
+                  <i class="fas fa-cog fa-spin"></i>
+                  <p>Analyse en cours...</p>
+                  <small>La vidéo sera disponible une fois l'analyse terminée</small>
+                </div>
+              } @else if (video.status === 'uploaded') {
+                <div class="video-placeholder uploaded">
+                  <i class="fas fa-hourglass-half"></i>
+                  <p>En attente d'analyse</p>
+                  <small>La vidéo n'a pas encore été analysée</small>
+                </div>
+              } @else if (video.status === 'failed') {
+                <div class="video-placeholder error">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <p>Erreur lors de l'analyse</p>
+                  <small>{{ video.error_message || 'Erreur inconnue' }}</small>
+                </div>
+              } @else {
+                <div class="video-placeholder">
+                  <i class="fas fa-video-slash"></i>
+                  <p>Vidéo non disponible</p>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- MÉTADONNÉES VIDÉO -->
+          <div class="metadata-card">
+            <div class="card-header">
+              <h3>📊 Informations Vidéo</h3>
+            </div>
+            <div class="metadata-grid">
+              <div class="metadata-item">
+                <span class="meta-label">Durée</span>
+                <span class="meta-value">{{ formatDuration(video.duration) }}</span>
+              </div>
+              <div class="metadata-item">
+                <span class="meta-label">FPS</span>
+                <span class="meta-value">{{ video.fps }}</span>
+              </div>
+              <div class="metadata-item">
+                <span class="meta-label">Frames totales</span>
+                <span class="meta-value">{{ video.total_frames }}</span>
+              </div>
+              <div class="metadata-item">
+                <span class="meta-label">Résolution</span>
+                <span class="meta-value">{{ video.width }}x{{ video.height }}</span>
+              </div>
+              <div class="metadata-item">
+                <span class="meta-label">Taille fichier</span>
+                <span class="meta-value">{{ (video.file_size / 1024 / 1024).toFixed(2) }} MB</span>
+              </div>
+              <div class="metadata-item">
+                <span class="meta-label">Modèle utilisé</span>
+                <span class="meta-value">{{ getModelLabel(video.model_type) }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- COLONNE DROITE - RÉSULTATS -->
+        <div class="right-column">
+          
+          <!-- RÉSULTATS DÉTECTION -->
+          @if (video.status === 'completed' && video.unique_objects) {
+            <div class="results-card">
+              <div class="card-header">
+                <h3>🎯 Détections Uniques</h3>
+              </div>
+              <div class="results-grid">
+                @for (key of objectKeys(video.unique_objects); track key) {
+                  @if (video.unique_objects[key] > 0) {
+                    <div class="result-item">
+                      <span class="result-label">{{ key }}</span>
+                      <span class="result-value">{{ video.unique_objects[key] }}</span>
+                    </div>
+                  }
+                }
+              </div>
+              
+              <div class="total-detections">
+                <span class="total-label">Total détections</span>
+                <span class="total-value">{{ video.total_detections || 0 }}</span>
+              </div>
+            </div>
+          }
+
+          <!-- RAPPORT DE PRÉSENCE (SI EMPLOYEES) -->
+          @if (attendanceReport && (video.model_type === 'employees' || video.model_type === 'both')) {
+            <div class="attendance-card">
+              <div class="card-header">
+                <h3>👥 Rapport de Présence</h3>
+              </div>
+              
+              <div class="attendance-summary">
+                <div class="attendance-circle" [style.borderColor]="getAttendanceColor()">
+                  <span class="attendance-percent">{{ attendanceReport.attendance_rate }}%</span>
+                  <span class="attendance-label">Présence</span>
+                </div>
+              </div>
+
+              <div class="attendance-stats">
+                <div class="stat-row">
+                  <span class="stat-label">Employés détectés</span>
+                  <span class="stat-value">{{ attendanceReport.total_employees }}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Présents</span>
+                  <span class="stat-value success">{{ attendanceReport.present_count }}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Absents</span>
+                  <span class="stat-value danger">{{ attendanceReport.absent_count }}</span>
+                </div>
+              </div>
+
+              @if (attendanceReport.employees && attendanceReport.employees.length > 0) {
+                <div class="employee-list">
+                  <h4>Liste des employés</h4>
+                  @for (emp of attendanceReport.employees; track emp.name) {
+                    <div class="employee-row" [class.present]="emp.status === 'present'" [class.absent]="emp.status === 'absent'">
+                      <span class="emp-name">{{ emp.name }}</span>
+                      <span class="emp-status">
+                        @if (emp.status === 'present') {
+                          <i class="fas fa-check-circle"></i> Présent
+                        } @else {
+                          <i class="fas fa-times-circle"></i> Absent
+                        }
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- PROCESSING STATE -->
+          @if (video.status === 'processing' || video.status === 'analyzing') {
+            <div class="processing-card">
+              <div class="card-header">
+                <h3>⏳ Analyse en cours</h3>
+              </div>
+              <div class="processing-content">
+                <i class="fas fa-cog fa-spin"></i>
+                <p>L'analyse de la vidéo est en cours...</p>
+                <small>Cette page se mettra à jour automatiquement</small>
+              </div>
+            </div>
+          }
+
+          <!-- TIMELINE -->
+          @if (video.created_at || video.analyzed_at) {
+            <div class="timeline-card">
+              <div class="card-header">
+                <h3>📅 Timeline</h3>
+              </div>
+              <div class="timeline-list">
+                @if (video.created_at) {
+                  <div class="timeline-item">
+                    <i class="fas fa-upload"></i>
+                    <div class="timeline-content">
+                      <span class="timeline-label">Upload</span>
+                      <span class="timeline-date">{{ video.created_at | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+                    </div>
+                  </div>
+                }
+                @if (video.analyzed_at) {
+                  <div class="timeline-item">
+                    <i class="fas fa-check-circle"></i>
+                    <div class="timeline-content">
+                      <span class="timeline-label">Analyse terminée</span>
+                      <span class="timeline-date">{{ video.analyzed_at | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+        </div>
+      </div>
+    </div>
+  }
+</div>

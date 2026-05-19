@@ -1,4 +1,13 @@
-from .productivity import ProductivityService
-from .kpi_calculator import KPICalculator
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Services d'analytics et KPI
+"""
 
-__all__ = ["ProductivityService", "KPICalculator"]
+from .kpi_service import KPIService
+from .productivity import ProductivityService
+
+__all__ = [
+    'KPIService',
+    'ProductivityService'
+]

@@ -12,6 +12,8 @@ from collections import defaultdict
 import cv2
 from bson import ObjectId
 import numpy as np
+import unicodedata
+import re
 
 from app.models.video import VideoUpload, VideoCreate, VideoStatus
 from app.models.detection import FrameDetection, BoundingBox
@@ -34,7 +36,35 @@ class VideoService:
         return Database
     
     @staticmethod
-    async def upload_video(file_path: str, filename: str) -> dict:
+    def normalize_filename(filename: str) -> str:
+        """
+        Normaliser un nom de fichier en enlevant les accents et caractères spéciaux
+        
+        Args:
+            filename: Nom de fichier original
+        
+        Returns:
+            Nom de fichier normalisé (ASCII seulement)
+        """
+        path_obj = Path(filename)
+        stem = path_obj.stem
+        extension = path_obj.suffix
+        
+        stem = unicodedata.normalize('NFKD', stem)
+        stem = stem.encode('ASCII', 'ignore').decode('ASCII')
+        stem = re.sub(r'[^\w\-]', '_', stem)
+        stem = re.sub(r'_+', '_', stem)
+        stem = stem.strip('_')
+        
+        return f"{stem}{extension}"
+    
+    @staticmethod
+    async def upload_video(
+        file_path: str, 
+        filename: str,
+        model_type: str = "objects",
+        confidence: float = 0.3
+    ) -> dict:
         """Upload et enregistrer une vidéo"""
         Database = VideoService._get_db()
         
@@ -44,8 +74,13 @@ class VideoService:
             
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_extension = Path(filename).suffix
-            new_filename = f"{Path(filename).stem}_{timestamp}{file_extension}"
+            
+            normalized_stem = VideoService.normalize_filename(Path(filename).stem)
+            new_filename = f"{normalized_stem}_{timestamp}{file_extension}"
             destination = upload_dir / new_filename
+            
+            logger.info(f"📝 Nom original: {filename}")
+            logger.info(f"📝 Nom normalisé: {new_filename}")
             
             shutil.copy(file_path, destination)
             
@@ -62,23 +97,24 @@ class VideoService:
             
             cap.release()
             
-            video_data = VideoCreate(
-                filename=new_filename,
-                file_path=str(destination),
-                duration=duration,
-                fps=fps,
-                width=width,
-                height=height,
-                total_frames=total_frames
-            )
-            
-            video = VideoUpload(**video_data.dict())
+            video_data = {
+                "filename": new_filename,
+                "file_path": str(destination),
+                "duration": duration,
+                "fps": fps,
+                "width": width,
+                "height": height,
+                "total_frames": total_frames,
+                "model_type": model_type,
+                "confidence": confidence,
+                "status": VideoStatus.UPLOADED,
+                "uploaded_at": datetime.now()
+            }
             
             collection = Database.get_collection("video_uploads")
-            video_dict = video.dict(by_alias=True, exclude={"id"})
-            result = await collection.insert_one(video_dict)
+            result = await collection.insert_one(video_data)
             
-            logger.info(f"✅ Vidéo uploadée : {new_filename}")
+            logger.info(f"✅ Vidéo uploadée : {new_filename} (model={model_type}, conf={confidence})")
             
             return {
                 "video_id": str(result.inserted_id),
@@ -98,17 +134,12 @@ class VideoService:
     def count_unique_objects_smart(frames_detections: List[FrameDetection], line_counts: dict = None) -> dict:
         """
         Comptage intelligent avec SAFEGUARD GLOBAL
-        - Produits : Via lignes (seulement si détectés)
-        - Employés (best_objects.pt) : Via zones + NMS (seulement si détectés)
-        - Noms (best_person.pt) : 1 nom = 1 personne (forcé à 1)
-        - Autres : Via statistique SEULEMENT si détectés
         """
         if not frames_detections:
             return {}
         
         unique_objects = {}
         
-        # ✅ ÉTAPE 0 : INVENTAIRE COMPLET DES CLASSES DÉTECTÉES
         detected_classes = set()
         for frame_det in frames_detections:
             for detection in frame_det.detections:
@@ -116,14 +147,12 @@ class VideoService:
         
         logger.info(f"🔍 Classes détectées dans la vidéo : {detected_classes}")
         
-        # ✅ 1. PRODUITS : Via Lignes SEULEMENT SI DÉTECTÉS
         if 'produit' in detected_classes:
             if line_counts and "produit" in line_counts:
                 product_count = line_counts["produit"]["TOTAL"]
                 unique_objects["produit"] = product_count
                 logger.info(f"📦 Produits (via Lignes): {product_count}")
             else:
-                # Comptage manuel par IDs
                 product_ids = set()
                 for frame_det in frames_detections:
                     for det in frame_det.detections:
@@ -133,7 +162,6 @@ class VideoService:
                     unique_objects["produit"] = len(product_ids)
                     logger.info(f"📦 Produits (comptage manuel): {len(product_ids)}")
 
-        # ✅ 2. EMPLOYÉS (best_objects.pt) : COMPTAGE PAR ZONES + NMS
         ZONES = {
             "zone_gauche": {"x_min": 0.0, "x_max": 0.5, "y_min": 0.0, "y_max": 1.0},
             "zone_droite": {"x_min": 0.5, "x_max": 1.0, "y_min": 0.0, "y_max": 1.0}
@@ -147,7 +175,6 @@ class VideoService:
         )
 
         if has_employees:
-            # ========== COMPTAGE TOTAL ==========
             frame_zone_occupancy_total = []
 
             for frame_det in frames_detections:
@@ -169,7 +196,6 @@ class VideoService:
                             bounds["y_min"] <= cy <= bounds["y_max"]):
                             zone_dets.append(det)
                     
-                    # NMS
                     zone_dets.sort(key=lambda x: x.confidence, reverse=True)
                     
                     kept_dets = []
@@ -221,9 +247,7 @@ class VideoService:
             
             unique_objects['employé'] = total_employees
             logger.info(f"👥 employé (TOTAL): {total_employees}")
-            logger.info(f"   Max Gauche: {max_total_left if frame_zone_occupancy_total else 0}, Max Droite: {max_total_right if frame_zone_occupancy_total else 0}")
             
-            # ========== COMPTAGE INACTIFS ==========
             if 'employé inactif' in detected_classes:
                 frame_zone_occupancy_inactive = []
 
@@ -294,27 +318,23 @@ class VideoService:
                 
                 if total_inactive > 0:
                     unique_objects['employé inactif'] = total_inactive
-                    logger.info(f"👥 employé inactif: {total_inactive} (Gauche: {max_inactive_left}, Droite: {max_inactive_right})")
+                    logger.info(f"👥 employé inactif: {total_inactive}")
                 
                 total_active = total_employees - total_inactive
                 if total_active > 0:
                     unique_objects['employé actif'] = total_active
-                    logger.info(f"👥 employé actif (calculé): {total_active} = {total_employees} - {total_inactive}")
+                    logger.info(f"👥 employé actif (calculé): {total_active}")
             
             elif 'employé actif' in detected_classes:
                 if total_employees > 0:
                     unique_objects['employé actif'] = total_employees
                     logger.info(f"👥 employé actif (classe détectée): {total_employees}")
-            else:
-                logger.info(f"👥 Pas de sous-classes employé (actif/inactif) détectées")
         
-        # ✅ 3. NOMS D'EMPLOYÉS (best_person.pt) : 1 NOM = 1 PERSONNE (FORCÉ À 1)
         EMPLOYEE_NAMES = {
             'amelie', 'seline', 'ibtihel', 'ali', 'mohamed', 
             'alena', 'adem', 'amir', 'sami', 'insaf', 'employe'
         }
         
-        # Détecter quels noms sont présents
         detected_names = set()
         total_unique_employees = 0
         
@@ -326,41 +346,32 @@ class VideoService:
         
         logger.info(f"👤 Noms détectés : {detected_names}")
         
-        # Compter chaque nom individuellement - FORCÉ À 1
         for name in detected_names:
-            # Ne pas compter "employe" comme nom individuel
             if name.lower() != 'employe':
-                # ✅ FORCER à 1 (1 nom = 1 personne unique)
                 unique_objects[name] = 1
                 total_unique_employees += 1
                 logger.info(f"👤 {name}: 1")
         
-        # ✅ Ajouter le TOTAL "employe"
         if total_unique_employees > 0:
             unique_objects['employe'] = total_unique_employees
             logger.info(f"👥 employe (TOTAL): {total_unique_employees}")
         
-        # ✅ Traiter "porte verte" et "temps" séparément (objets contextuels)
         contextual_objects = {'porte verte', 'porte_verte', 'temps', 'temp'}
         
         for frame_det in frames_detections:
             for det in frame_det.detections:
                 class_lower = det.class_name.lower()
                 
-                # Si c'est porte verte ou temps
                 if det.source == "employee_name" and class_lower in contextual_objects:
-                    # Normaliser le nom
                     if 'porte' in class_lower:
                         normalized_name = 'porte verte'
                     else:
                         normalized_name = 'temps'
                     
-                    # Ajouter si pas encore présent
                     if normalized_name not in unique_objects:
                         unique_objects[normalized_name] = 1
-                        logger.info(f"🏷️ {normalized_name}: 1 (objet contextuel)")
+                        logger.info(f"🏷️ {normalized_name}: 1")
         
-        # ✅ 4. AUTRES CLASSES (machines, tables, etc.) : COMPTAGE STATISTIQUE
         class_counts_per_frame = defaultdict(list)
         
         for frame_detection in frames_detections:
@@ -368,7 +379,6 @@ class VideoService:
             for detection in frame_detection.detections:
                 class_lower = detection.class_name.lower()
                 
-                # Exclure produits, employés et noms (déjà comptés)
                 if (class_lower not in EMPLOYEE_TERMS and 
                     class_lower != 'produit' and 
                     detection.source != "employee_name"):
@@ -385,12 +395,10 @@ class VideoService:
             class_lower = class_name.lower()
             
             if class_lower not in detected_classes:
-                logger.info(f"⚠️ Classe '{class_name}' dans comptage mais pas dans detected_classes - IGNORÉ")
                 continue
             
             non_zero = [c for c in counts if c > 0]
             if not non_zero:
-                logger.info(f"⚠️ Classe '{class_name}' : aucune frame avec count > 0 - IGNORÉ")
                 continue
             
             sorted_counts = sorted(non_zero, reverse=True)
@@ -408,12 +416,11 @@ class VideoService:
             if final_count > 0:
                 unique_objects[class_name] = final_count
                 logger.info(f"✅ {class_name}: {final_count}")
-            else:
-                logger.info(f"⚠️ Classe '{class_name}' : final_count = 0 - IGNORÉ")
         
         logger.info(f"🎯 Final: {unique_objects}")
         
         return unique_objects
+    
     @staticmethod
     async def process_video(
         video_id: str,
@@ -441,7 +448,8 @@ class VideoService:
             annotated_dir = Path(settings.ANNOTATED_DIR)
             annotated_dir.mkdir(parents=True, exist_ok=True)
             
-            annotated_filename = f"{Path(video.filename).stem}_annotated{Path(video.filename).suffix}"
+            normalized_stem = VideoService.normalize_filename(Path(video.filename).stem)
+            annotated_filename = f"{normalized_stem}_annotated{Path(video.filename).suffix}"
             annotated_path = annotated_dir / annotated_filename
             
             conf = confidence if confidence is not None else settings.CONFIDENCE_THRESHOLD
@@ -456,7 +464,6 @@ class VideoService:
             
             processor = FrameProcessor()
             
-            # Utiliser le comptage par ligne adaptatif
             frames_detections, metadata, line_counts = processor.process_video_with_line_counting(
                 video_path=str(video.file_path),
                 output_path=str(annotated_path),
@@ -507,6 +514,9 @@ class VideoService:
             
             logger.info(f"✅ Total: {total_detections} | Uniques: {unique_objects}")
             
+            # ✅ AJOUTÉ : Envoyer les notifications via WebSocket
+            await VideoService._send_analysis_notifications(video_id, video_doc, unique_objects)
+            
             return {
                 "video_id": video_id,
                 "status": "completed",
@@ -518,7 +528,14 @@ class VideoService:
         except Exception as e:
             logger.error(f"❌ Erreur: {e}")
             
+            # ✅ AJOUTÉ : Récupérer le nom du fichier et notifier l'erreur
+            Database = VideoService._get_db()
             collection = Database.get_collection("video_uploads")
+            video_doc = await collection.find_one({"_id": ObjectId(video_id)})
+            filename = video_doc.get('filename', 'Fichier inconnu') if video_doc else 'Fichier inconnu'
+            
+            await VideoService._send_error_notification(video_id, filename, str(e))
+            
             await collection.update_one(
                 {"_id": ObjectId(video_id)},
                 {"$set": {"status": VideoStatus.FAILED}}
@@ -578,3 +595,166 @@ class VideoService:
         except Exception as e:
             logger.error(f"❌ Erreur: {e}")
             return False
+    
+    @staticmethod
+    async def calculate_attendance(video_id: str) -> dict:
+        """Calculer la présence/absence des employés pour une vidéo"""
+        try:
+            from app.services.employee import EmployeeService
+            
+            video = await VideoService.get_video(video_id)
+            if not video or not video.unique_objects:
+                return {
+                    "total_employees": 0,
+                    "present": [],
+                    "present_count": 0,
+                    "absent": [],
+                    "absent_count": 0,
+                    "attendance_rate": 0
+                }
+            
+            EMPLOYEE_NAMES = {
+                'amelie', 'seline', 'ibtihel', 'ali', 'mohamed',
+                'alena', 'adem', 'amir', 'sami', 'insaf', 'aya'
+            }
+            
+            detected_names = []
+            for class_name in video.unique_objects.keys():
+                class_lower = class_name.lower()
+                if class_lower in EMPLOYEE_NAMES:
+                    detected_names.append(class_lower)
+            
+            logger.info(f"👤 Noms détectés dans la vidéo : {detected_names}")
+            
+            all_employees = await EmployeeService.list_employees(active_only=True)
+            
+            present_employees = []
+            absent_employees = []
+            
+            for emp in all_employees:
+                if emp.name in detected_names:
+                    present_employees.append({
+                        "id": str(emp.id),
+                        "name": emp.name,
+                        "full_name": emp.full_name,
+                        "department": emp.department,
+                        "email": emp.email
+                    })
+                else:
+                    absent_employees.append({
+                        "id": str(emp.id),
+                        "name": emp.name,
+                        "full_name": emp.full_name,
+                        "department": emp.department,
+                        "email": emp.email
+                    })
+            
+            total = len(all_employees)
+            present_count = len(present_employees)
+            attendance_rate = (present_count / total * 100) if total > 0 else 0
+            
+            logger.info(f"👥 Présence: {present_count}/{total} ({attendance_rate:.1f}%)")
+            
+            return {
+                "total_employees": total,
+                "present": present_employees,
+                "present_count": present_count,
+                "absent": absent_employees,
+                "absent_count": len(absent_employees),
+                "attendance_rate": round(attendance_rate, 1)
+            }
+        
+        except ImportError:
+            logger.warning("⚠️ EmployeeService non disponible")
+            return {
+                "total_employees": 0,
+                "present": [],
+                "present_count": 0,
+                "absent": [],
+                "absent_count": 0,
+                "attendance_rate": 0
+            }
+        except Exception as e:
+            logger.error(f"❌ Erreur calcul présence : {e}")
+            return {
+                "total_employees": 0,
+                "present": [],
+                "present_count": 0,
+                "absent": [],
+                "absent_count": 0,
+                "attendance_rate": 0
+            }
+    
+    # ✅ MÉTHODES WEBSOCKET AJOUTÉES
+    @staticmethod
+    async def _send_analysis_notifications(
+        video_id: str, 
+        video_doc: dict, 
+        unique_objects: dict
+    ):
+        """
+        Envoyer les notifications d'analyse terminée et d'alertes via WebSocket
+        """
+        try:
+            from app.api.v1.routes.websocket_route import manager
+            
+            logger.info(f"📨 Préparation notifications pour vidéo {video_id}")
+            
+            alerts = {
+                'machines_stopped': (
+                    unique_objects.get('machine arrêtée', 0) or 
+                    unique_objects.get('machine arretee', 0)
+                ),
+                'employees_inactive': (
+                    unique_objects.get('employé inactif', 0) or 
+                    unique_objects.get('employe inactif', 0)
+                ),
+                'tables_empty': (
+                    unique_objects.get('tables_vides', 0) or 
+                    unique_objects.get('table_vide', 0) or
+                    unique_objects.get('tables vides', 0)
+                ),
+                'employees_absent': 0
+            }
+            
+            logger.info(f"🚨 Alertes calculées: {alerts}")
+            
+            message = {
+                'type': 'analysis_complete',
+                'data': {
+                    'video_id': video_id,
+                    'filename': video_doc.get('filename'),
+                    'status': 'completed',
+                    'alerts': alerts
+                }
+            }
+            
+            logger.info(f"📤 Envoi notification WebSocket: {message}")
+            await manager.broadcast(message)
+            logger.info(f"✅ Notification envoyée pour vidéo {video_id}")
+        
+        except Exception as e:
+            logger.error(f"❌ Erreur envoi notification WebSocket: {e}")
+    
+    @staticmethod
+    async def _send_error_notification(video_id: str, filename: str, error: str):
+        """
+        Envoyer une notification d'erreur via WebSocket
+        """
+        try:
+            from app.api.v1.routes.websocket_route import manager
+            
+            message = {
+                'type': 'analysis_error',
+                'data': {
+                    'video_id': video_id,
+                    'filename': filename,
+                    'error': error
+                }
+            }
+            
+            logger.error(f"📤 Envoi notification d'erreur WebSocket: {message}")
+            await manager.broadcast(message)
+        
+        except Exception as e:
+            logger.error(f"❌ Erreur envoi notification erreur WebSocket: {e}")

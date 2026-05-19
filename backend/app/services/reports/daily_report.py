@@ -10,8 +10,7 @@ from datetime import datetime, date, timedelta
 from bson import ObjectId
 
 from app.models.kpi import DailyReport, KPISnapshot
-from app.services.analytics import KPICalculator
-from core.database import Database
+from app.services.analytics import KPIService
 
 import logging
 logger = logging.getLogger(__name__)
@@ -37,8 +36,8 @@ class DailyReportGenerator:
         try:
             logger.info(f"📊 Génération rapport journalier : {target_date}")
             
-            # Utiliser le KPICalculator pour générer le rapport
-            report = await KPICalculator.generate_daily_report(target_date)
+            # Utiliser le KPIService pour générer le rapport
+            report = await KPIService.generate_daily_report(target_date)
             
             # Enrichir avec des analyses supplémentaires
             enriched_report = await DailyReportGenerator._enrich_report(report)

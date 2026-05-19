@@ -1,0 +1,232 @@
+<div class="settings-container">
+  <div class="settings-header">
+    <button class="btn-back" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> {{ 'common.back' | translate }}
+    </button>
+    <h1>⚙️ {{ 'settings.title' | translate }}</h1>
+    <p class="header-subtitle">{{ 'settings.subtitle' | translate }}</p>
+    @if (hasUnsavedChanges()) {
+      <div class="unsaved-changes">
+        <i class="fas fa-exclamation-circle"></i> {{ 'settings.unsaved' | translate }}
+      </div>
+    }
+  </div>
+
+  <!-- Notifications -->
+  <div class="settings-section">
+    <div class="section-header">
+      <div class="header-icon">🔔</div>
+      <div class="header-text">
+        <h2>{{ 'settings.notifications' | translate }}</h2>
+        <p>{{ 'settings.notif_subtitle' | translate }}</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="setting-item" [class.active]="notificationSettings.machineStop">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">🚨</span>
+            <h3>{{ 'settings.machine_stop' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.machine_stop_desc' | translate }}</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" [(ngModel)]="notificationSettings.machineStop">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item" [class.active]="notificationSettings.employeeInactive">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">⚠️</span>
+            <h3>{{ 'settings.employee_inactive' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.employee_inactive_desc' | translate }}</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" [(ngModel)]="notificationSettings.employeeInactive">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item" [class.active]="notificationSettings.analysisComplete">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">✅</span>
+            <h3>{{ 'settings.analysis_complete' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.analysis_complete_desc' | translate }}</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" [(ngModel)]="notificationSettings.analysisComplete">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item" [class.active]="notificationSettings.analysisError">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">❌</span>
+            <h3>{{ 'settings.analysis_error' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.analysis_error_desc' | translate }}</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" [(ngModel)]="notificationSettings.analysisError">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- ✅ SON DE NOTIFICATION (GARDÉ) -->
+      <div class="setting-item" [class.active]="notificationSettings.soundEnabled">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">🔊</span>
+            <h3>{{ 'settings.sound_enabled' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.sound_desc' | translate }}</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" [(ngModel)]="notificationSettings.soundEnabled">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <!-- ❌ NOTIFICATIONS NAVIGATEUR (SUPPRIMÉ) -->
+    </div>
+    <div class="section-actions">
+      <button class="btn-test" (click)="testNotification()">
+        <i class="fas fa-bell"></i> {{ 'settings.test_notif' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Préférences utilisateur -->
+  <div class="settings-section">
+    <div class="section-header">
+      <div class="header-icon">👤</div>
+      <div class="header-text">
+        <h2>{{ 'settings.user_preferences' | translate }}</h2>
+        <p>{{ 'settings.user_subtitle' | translate }}</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <!-- 🎨 THÈME -->
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">🎨</span>
+            <h3>{{ 'settings.theme' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.theme_desc' | translate }}</p>
+        </div>
+        <select [(ngModel)]="userSettings.theme" (ngModelChange)="onThemeChange($event)" class="setting-select">
+          <option value="light">☀️ {{ 'settings.light' | translate }}</option>
+          <option value="dark">🌙 {{ 'settings.dark' | translate }}</option>
+          <option value="auto">🔄 {{ 'settings.auto' | translate }}</option>
+        </select>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">🌍</span>
+            <h3>{{ 'settings.language' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.language_desc' | translate }}</p>
+        </div>
+        <select [(ngModel)]="userSettings.language" (ngModelChange)="onLanguageChange($event)" class="setting-select">
+          <option value="fr">🇫🇷 Français</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="ar">🇸🇦 العربية</option>
+        </select>
+      </div>
+
+      
+    </div>
+  </div>
+
+  <!-- Paramètres système -->
+  <div class="settings-section">
+    <div class="section-header">
+      <div class="header-icon">🔧</div>
+      <div class="header-text">
+        <h2>{{ 'settings.system' | translate }}</h2>
+        <p>{{ 'settings.system_subtitle' | translate }}</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">🤖</span>
+            <h3>{{ 'settings.auto_analysis' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.auto_analysis_desc' | translate }}</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" [(ngModel)]="systemSettings.autoAnalysis">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item setting-range-item">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">📊</span>
+            <h3>{{ 'settings.confidence' | translate }}</h3>
+          </div>
+          <p>
+            {{ 'settings.confidence_desc' | translate }} : 
+            <strong>{{ systemSettings.confidenceThreshold }}</strong> 
+            <span class="confidence-label">({{ getConfidenceLabel(systemSettings.confidenceThreshold) }})</span>
+          </p>
+        </div>
+        <div class="range-container">
+          <input type="range" min="0.1" max="1.0" step="0.1" [(ngModel)]="systemSettings.confidenceThreshold" class="setting-range">
+          <div class="range-labels">
+            <span>0.1</span>
+            <span>0.5</span>
+            <span>1.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">📦</span>
+            <h3>{{ 'settings.max_size' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.max_size_desc' | translate }} : <strong>{{ systemSettings.maxVideoSize }}</strong></p>
+        </div>
+        <input type="number" min="100" max="2000" step="50" [(ngModel)]="systemSettings.maxVideoSize" class="setting-input">
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">
+            <span class="icon">🎯</span>
+            <h3>{{ 'settings.default_model' | translate }}</h3>
+          </div>
+          <p>{{ 'settings.default_model_desc' | translate }}</p>
+        </div>
+        <select [(ngModel)]="systemSettings.defaultModel" class="setting-select">
+          <option value="objects">📦 {{ 'settings.objects_only' | translate }}</option>
+          <option value="employees">👥 {{ 'settings.employees_only' | translate }}</option>
+          <option value="both">🔄 {{ 'settings.both_models' | translate }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-actions">
+    <button class="btn-secondary" (click)="resetSettings()" [disabled]="!hasUnsavedChanges()">
+      <i class="fas fa-undo"></i> {{ 'settings.reset' | translate }}
+    </button>
+    <button class="btn-primary" (click)="saveSettings()" [disabled]="!hasUnsavedChanges()">
+      <i class="fas fa-save"></i> {{ 'settings.save' | translate }}
+    </button>
+  </div>
+</div>

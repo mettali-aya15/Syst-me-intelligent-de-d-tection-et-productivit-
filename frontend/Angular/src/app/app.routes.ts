@@ -1,48 +1,66 @@
 import { Routes } from '@angular/router';
-import { Home } from './home/home';
-import { Contact } from './contact/contact';
-import { About } from './about/about';
-import { Login } from './features/login/login';
-import { Register } from './features/register/register';
-import { Admin } from './features/admin/admin';
-import { AccessDenied } from './shared/components/access-denied/access-denied';
-
-import { adminGuard, authGuard, managerGuard } from './core/auth/auth.guard';
-import { EmpList } from './features/employees/emp-list/emp-list';
-import { MachineList } from './features/machines/machines-list/machines-list';
-import { ProductionList } from './features/production/production-list/production-list';
-import { RapportsComponent } from './features/repots/rapports/rapports';
-import { NotificationListComponent } from './shared/components/notifications/notif-list/notif-list';
-import { AdminDashboard } from './features/admin/admin-dashboard/admin-dashboard';
-import { OperatorDashboard } from './features/operator/operator-dashboard/operator-dashboard';
-import { Manager } from './features/manager/manager-dashboard/manager-dashboard';
-import { UserManagementComponent } from './features/admin/user-management/user-management/user-management';
-
-
+import { authGuard, adminGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
-    {path:'',component:Home},
-    {path:'contact',component:Contact},
-    {path:'about',component:About},
-    {path:'login',component:Login},
-    {path:'register',component:Register},
-    {path:'access-denied',component:AccessDenied},
-    {path:'admin',component:Admin  ,canActivate:[adminGuard]},
-    {path:'manager',component:Manager , canActivate:[managerGuard]},
-     {path:'app-admin-dashboard',component:AdminDashboard },
-    
-{ path: 'machines', component: MachineList  , canActivate: [authGuard]},
-{ path: 'machines/:id', component: MachineList ,canActivate: [authGuard]},
+  {
+    path: '',
+    redirectTo: 'login',
+    pathMatch: 'full'
+  },
 
+  {
+    path: 'login',
+    loadComponent: () => import('./features/login/login').then(m => m.Login)
+  },
 
-    {path:'production',component:ProductionList,canActivate: [authGuard]},
-    {path:'emp-list',component:EmpList,canActivate: [authGuard]},
-  
-{path:'rapport',component:RapportsComponent,canActivate: [authGuard]},
-  {path:'notifications',component:NotificationListComponent,canActivate: [authGuard]},
+  {
+    path: 'admin',
+    canActivate: [authGuard, adminGuard],
+    children: [
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/admin/admin-dashboard/admin-dashboard').then(m => m.AdminDashboardComponent)
+      },
+      {
+        path: 'kpi',
+        loadComponent: () => import('./features/admin/kpi-dashboard/kpi-dashboard.component').then(m => m.KpiDashboardComponent)
+      },
+      {
+        path: 'videos',
+        loadComponent: () => import('./features/videos/video-list/video-list').then(m => m.VideoListComponent)
+      },
+      // ✅ ROUTE UPLOAD VIDEO
+      {
+        path: 'videos/upload',
+        loadComponent: () => import('./features/videos/video-upload/video-upload').then(m => m.VideoUploadComponent)
+      },
+      // ✅ ROUTE DÉTAILS VIDEO (doit être APRÈS upload)
+      {
+        path: 'videos/:id',
+        loadComponent: () => import('./features/videos/video-detail/video-detail').then(m => m.VideoDetailComponent)
+      },
+      {
+        path: 'employees',
+        loadComponent: () => import('./features/employees/emp-list/emp-list').then(m => m.EmpListComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./features/admin/notifications/notifications.component').then(m => m.NotificationsComponent)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./features/admin/settings/settings.component').then(m => m.SettingsComponent)
+      }
+    ]
+  },
 
- {path:'operator',component:OperatorDashboard},
- {path:'kpi',component:Admin,  canActivate: [adminGuard]},
- {path:'users',component:UserManagementComponent,  canActivate: [adminGuard]},
+  {
+    path: '**',
+    redirectTo: 'login'
+  }
 ];
-

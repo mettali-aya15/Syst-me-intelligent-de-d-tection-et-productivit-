@@ -1,156 +1,183 @@
-<div class="emp-container">
-  
-  <a routerLink="/app-admin-dashboard" class="back-btn">
-    <i class="fas fa-arrow-left"></i> Retour 
-  </a>
-
-  <!-- Header Section -->
-  <div class="emp-header">
-    <div class="emp-title-section">
-      <h2>Gestion des Employés</h2>
-      <p>Gérez votre équipe efficacement</p>
+<div class="employees-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>👥 Gestion des Employés</h1>
+      <p class="subtitle">{{ filteredEmployees.length }} employé(s)</p>
     </div>
-    <div class="emp-counter">
-      <span class="emp-counter-label">Total :</span>
-      <span class="emp-counter-value">{{ filteredEmployees.length }}</span>
-    </div>
+    <button class="btn-primary" (click)="openCreateModal()">
+      ➕ Ajouter un employé
+    </button>
   </div>
 
-  <!-- NOUVEAU : Barre de Filtres -->
-  <div class="filter-bar glass-card">
+  <!-- Filtres et recherche -->
+  <div class="filters-section">
     <div class="search-box">
-      <i class="fas fa-search"></i>
-      <input 
-        type="text" 
-        [(ngModel)]="searchQuery" 
-        (ngModelChange)="onSearch($event)" 
-        placeholder="Rechercher un employé, un poste ou un service...">
+      <input
+        type="text"
+        placeholder="🔍 Rechercher par nom, email, département..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchChange()"
+      />
     </div>
-    <div class="filter-controls">
-      <select [(ngModel)]="statusFilter" (ngModelChange)="onStatusChange($event)" class="status-select">
-        <option value="all">Tous les statuts</option>
-        <option value="active">Actifs uniquement</option>
-        <option value="inactive">Inactifs uniquement</option>
-      </select>
+
+    <div class="filter-tabs">
+      <button
+        class="filter-tab"
+        [class.active]="filterActive === 'all'"
+        (click)="filterActive = 'all'; onFilterChange()"
+      >
+        Tous ({{ employees.length }})
+      </button>
+      <button
+        class="filter-tab"
+        [class.active]="filterActive === 'active'"
+        (click)="filterActive = 'active'; onFilterChange()"
+      >
+        Actifs ({{ activeCount }})
+      </button>
+      <button
+        class="filter-tab"
+        [class.active]="filterActive === 'inactive'"
+        (click)="filterActive = 'inactive'; onFilterChange()"
+      >
+        Inactifs ({{ inactiveCount }})
+      </button>
     </div>
   </div>
 
-  <!-- Grille de cartes -->
-  @if (!isLoading) {
-    <div class="emp-grid">
-      @for (emp of filteredEmployees; track emp.id) {
-        <div class="emp-card glass-card">
-          <!-- ... (Contenu de votre carte existante) ... -->
-           <div class="emp-profile-section">
-            <div class="emp-avatar-wrapper">
-              <img [src]="emp.avatar || 'https://ui-avatars.com/api/?name='+emp.firstName+'+'+emp.lastName" class="emp-avatar">
-              <div class="emp-status-indicator" [ngClass]="emp.status"></div>
-            </div>
-            <div class="emp-info">
-              <h3 class="emp-name">{{ emp.firstName }} {{ emp.lastName }}</h3>
-              <p class="emp-position">{{ emp.position }}</p>
-              <div class="emp-department">{{ emp.department }}</div>
-            </div>
-            <span class="emp-status-badge" [ngClass]="emp.status">{{ emp.status }}</span>
-          </div>
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Chargement des employés...</p>
+  </div>
 
-          <div class="emp-performance-section">
-            <div class="emp-performance-header">
-              <span>Performance</span>
-              <span class="emp-performance-value" [style.color]="emp.performance > 80 ? '#10b981' : '#f59e0b'">
-                {{ emp.performance }}%
-              </span>
-            </div>
-            <div class="emp-progress-bar">
-              <div class="emp-progress-fill" [style.width.%]="emp.performance" [style.background]="emp.performance > 80 ? '#10b981' : '#f59e0b'"></div>
-            </div>
-          </div>
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="error-box">
+    {{ error }}
+  </div>
 
-          <div class="emp-contact-section">
-            <div class="emp-contact-item"><i>📅</i> <span>{{ emp.shift }}</span></div>
-            <div class="emp-contact-item"><i>📞</i> <span>{{ emp.phone }}</span></div>
-            <div class="emp-contact-item email"><i>✉️</i> <a href="mailto:{{ emp.email }}">{{ emp.email }}</a></div>
-          </div>
-
-          <div class="emp-actions">
-            @if (canManage) {
-              <button class="emp-btn emp-btn-primary" (click)="editEmployee(emp)">
-                <i class="fas fa-edit"></i> Modifier
-              </button>
-            }
-            @if (isAdmin) {
-              <button class="emp-btn emp-btn-danger" (click)="deleteEmployee(emp)">
-                <i class="fas fa-trash"></i> Supprimer
-              </button>
-            }
-          </div>
-        </div>
-      } @empty {
-        <div class="emp-empty-state">
-          <i class="fas fa-user-slash"></i>
-          <h3>Aucun employé trouvé</h3>
-          <p>Essayez de modifier vos critères de recherche.</p>
-        </div>
-      }
-    </div>
-  } @else {
-    <div class="emp-loading-state">
-      <i class="fas fa-circle-notch fa-spin"></i>
-      <p>Chargement des effectifs...</p>
-    </div>
-  }
-</div>
-
-<!-- Modal d'édition (Garder votre code modal existant avec style glass) -->
-
-<!-- Fin de emp-container -->
-
-<!-- AJOUT : MODAL D'ÉDITION -->
-@if (editingEmployee) {
-  <div class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Modifier {{ editingEmployee.firstName }} {{ editingEmployee.lastName }}</h3>
-        <button class="close-btn" (click)="cancelEdit()">×</button>
+  <!-- Liste des employés -->
+  <div *ngIf="!loading && !error" class="employees-grid">
+    <div *ngFor="let employee of filteredEmployees" class="employee-card">
+      <div class="employee-avatar">
+        {{ employee.full_name.charAt(0) }}
       </div>
 
-      <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+      <div class="employee-info">
+        <div class="employee-name">{{ employee.full_name }}</div>
+        <div class="employee-details">
+          <span class="detail-item">📛 {{ employee.name }}</span>
+          <span class="detail-item" *ngIf="employee.department">
+            🏢 {{ employee.department }}
+          </span>
+          <span class="detail-item" *ngIf="employee.email">
+            📧 {{ employee.email }}
+          </span>
+        </div>
+      </div>
+
+      <div class="employee-status">
+        <span
+          class="status-badge"
+          [class.active]="employee.active"
+          [class.inactive]="!employee.active"
+        >
+          {{ employee.active ? 'Actif' : 'Inactif' }}
+        </span>
+      </div>
+
+      <div class="employee-actions">
+        <button class="btn-edit" (click)="openEditModal(employee)" title="Modifier">
+          ✏️
+        </button>
+        <button
+          class="btn-toggle"
+          (click)="toggleStatus(employee)"
+          [title]="employee.active ? 'Désactiver' : 'Activer'"
+        >
+          {{ employee.active ? '🔴' : '🟢' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Message si aucun résultat -->
+    <div *ngIf="filteredEmployees.length === 0" class="no-results">
+      <div class="no-results-icon">🔍</div>
+      <p>Aucun employé trouvé</p>
+    </div>
+  </div>
+
+  <!-- Modal Créer/Modifier -->
+  <div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ modalMode === 'create' ? '➕ Ajouter un employé' : '✏️ Modifier un employé' }}</h2>
+        <button class="btn-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
         <div class="form-group">
-          <label>Prénom</label>
-          <input type="text" formControlName="firstName">
+          <label>Nom YOLO <span class="required">*</span></label>
+          <input
+            type="text"
+            [(ngModel)]="currentEmployee.name"
+            placeholder="ali, mohamed, sami..."
+            required
+          />
+          <small>Nom détecté par le système YOLO (en minuscule)</small>
         </div>
 
         <div class="form-group">
-          <label>Nom</label>
-          <input type="text" formControlName="lastName">
+          <label>Nom complet <span class="required">*</span></label>
+          <input
+            type="text"
+            [(ngModel)]="currentEmployee.full_name"
+            placeholder="Ali Ben Salem"
+            required
+          />
         </div>
 
         <div class="form-group">
           <label>Email</label>
-          <input type="email" formControlName="email">
+          <input
+            type="email"
+            [(ngModel)]="currentEmployee.email"
+            placeholder="ali@camia-factory.tn"
+          />
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Poste</label>
-            <input type="text" formControlName="position">
-          </div>
-          <div class="form-group">
-            <label>Département</label>
-            <input type="text" formControlName="department">
-          </div>
-        </div>
-        
         <div class="form-group">
-            <label>Téléphone</label>
-            <input type="text" formControlName="phone">
+          <label>Département</label>
+          <select [(ngModel)]="currentEmployee.department">
+            <option value="Production">Production</option>
+            <option value="Qualité">Qualité</option>
+            <option value="Logistique">Logistique</option>
+            <option value="Maintenance">Maintenance</option>
+            <option value="RH">RH</option>
+            <option value="Administration">Administration</option>
+          </select>
         </div>
 
-        <div class="modal-actions">
-          <button type="button" class="emp-btn emp-btn-danger" (click)="cancelEdit()">Annuler</button>
-          <button type="submit" class="emp-btn emp-btn-primary" [disabled]="editForm.invalid">Enregistrer</button>
+        <div class="form-group checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              [(ngModel)]="currentEmployee.active"
+            />
+            <span>Employé actif</span>
+          </label>
         </div>
-      </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModal()">
+          Annuler
+        </button>
+        <button class="btn-primary-modal" (click)="saveEmployee()">
+          {{ modalMode === 'create' ? 'Créer' : 'Enregistrer' }}
+        </button>
+      </div>
     </div>
   </div>
-}
+</div>

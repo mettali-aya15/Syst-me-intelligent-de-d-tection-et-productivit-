@@ -1,0 +1,185 @@
+﻿Structure du dossier pour le volume OS
+Le numÚro de sÚrie du volume est 8EAC-FCB8
+C:\USERS\EYAMA\ONEDRIVE\BUREAU\CAMIA-FACTORY\BACKEND\APP
+|   main.py
+|   __init__.py
+|   
++---api
+|   \---v1
+|       +---routes
+|       |   |   alerts.py
+|       |   |   auth.py
+|       |   |   dashboard.py
+|       |   |   detections.py
+|       |   |   employees.py
+|       |   |   events.py
+|       |   |   kpis.py
+|       |   |   machines.py
+|       |   |   reports.py
+|       |   |   router.py
+|       |   |   videos.py
+|       |   |   websocket_route.py
+|       |   |   
+|       |   \---__pycache__
+|       |           alerts.cpython-310.pyc
+|       |           auth.cpython-310.pyc
+|       |           cameras.cpython-310.pyc
+|       |           dashboard.cpython-310.pyc
+|       |           detections.cpython-310.pyc
+|       |           employees.cpython-310.pyc
+|       |           events.cpython-310.pyc
+|       |           kpis.cpython-310.pyc
+|       |           machines.cpython-310.pyc
+|       |           reports.cpython-310.pyc
+|       |           router.cpython-310.pyc
+|       |           videos.cpython-310.pyc
+|       |           websocket_route.cpython-310.pyc
+|       |           workstation.cpython-310.pyc
+|       |           
+|       \---__pycache__
+|               router.cpython-310.pyc
+|               
++---core
+|   |   config.py
+|   |   database.py
+|   |   logger.py
+|   |   security.py
+|   |   
+|   \---__pycache__
+|           config.cpython-310.pyc
+|           database.cpython-310.pyc
+|           logger.cpython-310.pyc
+|           security.cpython-310.pyc
+|           
++---models
+|   |   alert.py
+|   |   detection.py
+|   |   employee.py
+|   |   event.py
+|   |   kpi.py
+|   |   machine.py
+|   |   user.py
+|   |   video.py
+|   |   __init__.py
+|   |   
+|   \---__pycache__
+|           alert.cpython-310.pyc
+|           detection.cpython-310.pyc
+|           employee.cpython-310.pyc
+|           event.cpython-310.pyc
+|           kpi.cpython-310.pyc
+|           machine.cpython-310.pyc
+|           user.cpython-310.pyc
+|           video.cpython-310.pyc
+|           workstation.cpython-310.pyc
+|           __init__.cpython-310.pyc
+|           
++---schemas
+|   |   analytics.py
+|   |   detection.py
+|   |   employee.py
+|   |   video.py
+|   |   
+|   \---__pycache__
+|           detection.cpython-310.pyc
+|           
++---services
+|   |   employee.py
+|   |   
+|   +---ai
+|   |   |   frame_processor.py
+|   |   |   yolo_detector.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           frame_processor.cpython-310.pyc
+|   |           yolo_detector.cpython-310.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   +---analytics
+|   |   |   kpi_service.py
+|   |   |   productivity.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           kpi_calculator.cpython-310.pyc
+|   |           kpi_service.cpython-310.pyc
+|   |           productivity.cpython-310.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   +---events
+|   |       event_builder.py
+|   |       event_processor.py
+|   |       __init__.py
+|   |       
+|   +---logic
+|   |   |   machine_logic.py
+|   |   |   rules.py
+|   |   |   tracking.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           knitting_logic.cpython-310.pyc
+|   |           machine_logic.cpython-310.pyc
+|   |           rules.cpython-310.pyc
+|   |           sewing_logic.cpython-310.pyc
+|   |           tracking.cpython-310.pyc
+|   |           workstation.cpython-310.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   +---realtime
+|   |   |   websocket.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           websocket.cpython-310.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   +---reports
+|   |   |   daily_report.py
+|   |   |   report_generator.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           daily_report.cpython-310.pyc
+|   |           kpi_calculator.cpython-310.pyc
+|   |           report_generator.cpython-310.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   +---video
+|   |   |   video_service.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           video_service.cpython-310.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   \---__pycache__
+|           employee.cpython-310.pyc
+|           video_service.cpython-310.pyc
+|           
++---tests
+|       test_events.py
+|       test_reports.py
+|       test_rules.py
+|       
++---utils
+|   |   anonymizer.py
+|   |   file_hash.py
+|   |   math_utils.py
+|   |   time_utils.py
+|   |   __init__.py
+|   |   
+|   \---__pycache__
+|           file_hash.cpython-310.pyc
+|           __init__.cpython-310.pyc
+|           
++---workers
+|       alert_worker.py
+|       report_worker.py
+|       rtsp_worker.py
+|       
+\---__pycache__
+        main.cpython-310.pyc
+        __init__.cpython-310.pyc
+        

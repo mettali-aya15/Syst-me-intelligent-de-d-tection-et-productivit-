@@ -1,0 +1,149 @@
+<div class="upload-container">
+  <a routerLink="/admin/videos" class="back-btn">
+    <i class="fas fa-arrow-left"></i>
+    Retour à la liste
+  </a>
+
+  <div class="upload-header">
+    <h2>📹 Upload de Vidéo</h2>
+    <p>Téléchargez une vidéo pour analyse IA avec YOLO</p>
+  </div>
+
+  <div class="upload-card">
+    
+    <div class="form-group">
+      <label for="fileInput">Fichier vidéo *</label>
+      <input 
+        type="file" 
+        id="fileInput"
+        accept="video/mp4,video/avi,video/mov,video/x-matroska"
+        (change)="onFileSelected($event)"
+        [disabled]="isUploading"
+      />
+      <small class="help-text">Formats supportés : MP4, AVI, MOV, MKV (max 500 MB)</small>
+      
+      @if (selectedFile) {
+        <div class="file-info">
+          <i class="fas fa-file-video"></i>
+          <span>{{ selectedFile.name }}</span>
+          <span class="file-size">({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB)</span>
+        </div>
+      }
+    </div>
+
+    <div class="form-group">
+      <label for="modelType">Type de modèle *</label>
+      <select 
+        id="modelType" 
+        [(ngModel)]="modelType"
+        [disabled]="isUploading"
+      >
+        <option value="objects">Objets uniquement (produits, machines, tables)</option>
+        <option value="employees">Employés uniquement (reconnaissance faciale)</option>
+        <option value="both">Les deux modèles (objets + employés)</option>
+      </select>
+      <small class="help-text">Choisissez quel(s) modèle(s) YOLO exécuter</small>
+    </div>
+
+    <div class="form-group">
+      <label for="confidence">
+        Seuil de confiance : {{ confidence }}
+      </label>
+      <input 
+        type="range" 
+        id="confidence"
+        min="0.1" 
+        max="1.0" 
+        step="0.1"
+        [(ngModel)]="confidence"
+        [disabled]="isUploading"
+      />
+      <small class="help-text">Plus bas = plus de détections (mais plus de faux positifs)</small>
+    </div>
+
+    @if (errorMessage) {
+      <div class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage && !isUploading) {
+      <div class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        {{ successMessage }}
+        
+        <div class="analyze-section">
+          <button 
+            class="btn-analyze"
+            (click)="analyzeVideo()"
+            [disabled]="isAnalyzing"
+          >
+            @if (isAnalyzing) {
+              <i class="fas fa-spinner fa-spin"></i>
+              Analyse en cours...
+            } @else {
+              <i class="fas fa-brain"></i>
+              🎬 Analyser maintenant
+            }
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (isUploading) {
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div 
+            class="progress-fill" 
+            [style.width.%]="uploadProgress"
+          ></div>
+        </div>
+        <span class="progress-text">{{ uploadProgress }}%</span>
+      </div>
+    }
+
+    <div class="actions">
+      <button 
+        class="btn-primary"
+        (click)="uploadVideo()"
+        [disabled]="!selectedFile || isUploading || uploadedVideoId !== null"
+      >
+        @if (isUploading) {
+          <i class="fas fa-spinner fa-spin"></i>
+          Upload en cours...
+        } @else if (uploadedVideoId) {
+          <i class="fas fa-check"></i>
+          Vidéo uploadée
+        } @else {
+          <i class="fas fa-upload"></i>
+          Upload vidéo
+        }
+      </button>
+
+      <button 
+        class="btn-secondary"
+        (click)="resetForm()"
+        [disabled]="isUploading || isAnalyzing"
+      >
+        <i class="fas fa-redo"></i>
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <h3>ℹ️ Informations</h3>
+    <ul>
+      <li><strong>Formats supportés :</strong> MP4, AVI, MOV, MKV</li>
+      <li><strong>Taille maximale :</strong> 500 MB</li>
+      <li><strong>Temps de traitement :</strong> Variable selon la durée de la vidéo</li>
+      <li><strong>Modèles disponibles :</strong> 
+        <ul>
+          <li><code>best_objects.pt</code> - 9 classes (produits, employés, machines)</li>
+          <li><code>best_person.pt</code> - 13 classes (noms individuels)</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</div>

@@ -1,0 +1,111 @@
+﻿Structure du dossier pour le volume OS
+Le numÚro de sÚrie du volume est 8EAC-FCB8
+C:\USERS\EYAMA\ONEDRIVE\BUREAU\CAMIA-FACTORY\FRONTEND\ANGULAR\SRC\APP
+|   app.config.ts
+|   app.css
+|   app.html
+|   app.routes.ts
+|   app.ts
+|   
++---core
+|   +---auth
+|   |       auth-interceptor.ts
+|   |       auth.guard.ts
+|   |       auth.ts
+|   |       
+|   +---models
+|   |       kpi.model.ts
+|   |       user.ts
+|   |       
+|   \---services
+|           kpi.service.ts
+|           notification.service.ts
+|           settings.service.ts
+|           translation.service.ts
+|           websocket.service.ts
+|           
++---features
+|   +---admin
+|   |   |   admin.css
+|   |   |   admin.html
+|   |   |   admin.ts
+|   |   |   
+|   |   +---admin-dashboard
+|   |   |       admin-dashboard.html
+|   |   |       admin-dashboard.scss
+|   |   |       admin-dashboard.ts
+|   |   |       
+|   |   +---kpi-dashboard
+|   |   |       kpi-dashboard.component.html
+|   |   |       kpi-dashboard.component.scss
+|   |   |       kpi-dashboard.component.ts
+|   |   |       
+|   |   +---notifications
+|   |   |       notifications.component.html
+|   |   |       notifications.component.scss
+|   |   |       notifications.component.ts
+|   |   |       
+|   |   \---settings
+|   |           settings.component.html
+|   |           settings.component.scss
+|   |           settings.component.ts
+|   |           
+|   +---employees
+|   |   |   employee.ts
+|   |   |   
+|   |   +---emp-list
+|   |   |       emp-list.css
+|   |   |       emp-list.html
+|   |   |       emp-list.ts
+|   |   |       
+|   |   \---services
+|   |           employee.service.ts
+|   |           
+|   +---login
+|   |       login.css
+|   |       login.html
+|   |       login.ts
+|   |       
+|   \---videos
+|       |   videos.routes.ts
+|       |   
+|       +---models
+|       |       video.model.ts
+|       |       
+|       +---services
+|       |       video.service.ts
+|       |       
+|       +---video-detail
+|       |       video-detail.html
+|       |       video-detail.scss
+|       |       video-detail.ts
+|       |       
+|       +---video-list
+|       |       video-list.html
+|       |       video-list.scss
+|       |       video-list.ts
+|       |       
+|       \---video-upload
+|               video-upload.html
+|               video-upload.scss
+|               video-upload.ts
+|               
+\---shared
+    +---components
+    |   +---access-denied
+    |   |       access-denied.css
+    |   |       access-denied.html
+    |   |       access-denied.spec.ts
+    |   |       access-denied.ts
+    |   |       
+    |   +---back-button
+    |   |       back-button.component.ts
+    |   |       
+    |   \---navbar
+    |           navbar.component.html
+    |           navbar.component.scss
+    |           navbar.component.ts
+    |           
+    \---pipes
+            translate.pipe.ts
+            

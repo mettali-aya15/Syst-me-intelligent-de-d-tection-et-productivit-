@@ -275,7 +275,7 @@
       "title": "Maintenance programmée",
       "message": "Maintenance de la machine C3 prévue le 03/02/2025",
       "userId": "manager_001",
-      "read": false,
+      "read": true,
       "createdAt": "2025-01-11T09:00:00.000Z",
       "priority": "medium"
     },
@@ -285,7 +285,7 @@
       "title": "Objectif atteint",
       "message": "La production de la journée a dépassé l'objectif de 5%",
       "userId": "manager_001",
-      "read": false,
+      "read": true,
       "createdAt": "2025-01-10T18:00:00.000Z",
       "priority": "low"
     },

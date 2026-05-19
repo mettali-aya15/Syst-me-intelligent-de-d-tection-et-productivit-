@@ -159,5 +159,4 @@ class EventProcessor:
         
         return events
     
-    @staticmethod
-    async def _process_productio
+    

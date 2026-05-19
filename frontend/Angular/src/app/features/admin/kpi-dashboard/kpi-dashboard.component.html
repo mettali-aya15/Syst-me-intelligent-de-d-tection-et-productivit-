@@ -1,0 +1,422 @@
+<div class="kpi-dashboard">
+  
+  <!-- ==========================================
+       HEADER CARD (Style Glass)
+       ========================================== -->
+  <div class="header-card glass-card">
+    <div class="dashboard-header">
+      <div class="header-info">
+        <h1>
+          <i class="fas fa-chart-line"></i>
+          Tableau de Bord Performance (KPI)
+        </h1>
+        <p class="header-subtitle" *ngIf="currentVideoKpi">
+          📊 Analyse : <strong>{{ currentVideoKpi.filename }}</strong>
+        </p>
+        <p class="header-date" *ngIf="currentVideoKpi">
+          🕒 {{ currentVideoKpi.timestamp }}
+        </p>
+      </div>
+      <div class="header-actions">
+        <!-- ✅ BOUTONS EXPORT -->
+        <div class="export-buttons">
+          <button class="btn-export pdf" (click)="exportToPDF()" [disabled]="loading || !currentVideoKpi">
+            <i></i>
+            Export PDF
+          </button>
+          <button class="btn-export excel" (click)="exportToExcel()" [disabled]="loading || !currentVideoKpi">
+            <i></i>
+            Export Excel
+          </button>
+        </div>
+
+        <div class="period-selector">
+          <label><i class="far fa-clock"></i> Période :</label>
+          <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" [disabled]="loading">
+            <option value="video">Durée de la vidéo (Réel)</option>
+            <option value="hour">Dernière heure</option>
+            <option value="day">Aujourd'hui</option>
+            <option value="week">Cette semaine</option>
+            <option value="month">Ce mois</option>
+          </select>
+        </div>
+        <button class="btn-refresh" (click)="refresh()" [disabled]="loading">
+          <i class="fas fa-sync-alt" [class.spinning]="loading"></i>
+          Actualiser
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       📈 RÉSUMÉ DES PROJECTIONS TEMPORELLES
+       ========================================== -->
+  <div class="projection-banner glass-card" *ngIf="currentVideoKpi">
+    <div class="projection-header">
+      <i class="fas fa-chart-area"></i>
+      <h4>Projections basées sur l'analyse</h4>
+      <span class="projection-period">{{ getPeriodLabel() }}</span>
+    </div>
+    
+    <div class="projection-grid">
+      <div class="projection-item">
+        <div class="projection-icon products"><i></i></div>
+        <div class="projection-content">
+          <div class="projection-label">Produits détectés</div>
+          <div class="projection-value">{{ projectionSummary.estimatedProducts | number }}</div>
+          <div class="projection-base">
+            Base: {{ currentVideoKpi.raw.products }} × {{ projectionSummary.factor }}
+          </div>
+        </div>
+      </div>
+      
+      <div class="projection-item">
+        <div class="projection-icon machines"><i></i></div>
+        <div class="projection-content">
+          <div class="projection-label">Machines actives</div>
+          <div class="projection-value">{{ projectionSummary.machines | number }}</div>
+          <div class="projection-base">
+            Base: {{ currentVideoKpi.raw.machines }} (inchangé)
+          </div>
+        </div>
+      </div>
+      
+      <div class="projection-item">
+        <div class="projection-icon employees"><i></i></div>
+        <div class="projection-content">
+          <div class="projection-label">Employés actifs</div>
+          <div class="projection-value">{{ projectionSummary.employees | number }}</div>
+          <div class="projection-base">
+            Base: {{ currentVideoKpi.raw.employesActifs || currentVideoKpi.raw.employees }} (inchangé)
+          </div>
+        </div>
+      </div>
+      
+      <div class="projection-item factor">
+        <div class="projection-icon factor"><i></i></div>
+        <div class="projection-content">
+          <div class="projection-label">Facteur de projection</div>
+          <div class="projection-value">×{{ projectionSummary.factor }}</div>
+          <div class="projection-base">
+            Durée vidéo: {{ videoDuration }}s → {{ getPeriodLabel() }}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="projection-example">
+      <small>
+        💡 <strong>Exemple :</strong> Si la vidéo de {{ videoDuration }}s détecte 
+        <strong>{{ currentVideoKpi.raw.products }} produits</strong>, 
+        alors pour <strong>{{ getPeriodLabel() }}</strong> on estime : 
+        <strong>{{ projectionSummary.estimatedProducts | number }} produits</strong> 
+        ({{ currentVideoKpi.raw.products }} × {{ projectionSummary.factor }})
+      </small>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       ALERTES
+       ========================================== -->
+  <div class="alerts-banner glass-card" *ngIf="activeAlerts.length > 0">
+    <div class="alert-item" *ngFor="let alert of activeAlerts" [class]="'alert-' + alert.severity">
+      <i class="fas" 
+         [class.fa-exclamation-triangle]="alert.severity === 'warning'"
+         [class.fa-times-circle]="alert.severity === 'critical'"
+         [class.fa-info-circle]="alert.severity === 'info'"></i>
+      <span>{{ alert.message }}</span>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       LOADING
+       ========================================== -->
+  <div *ngIf="loading && !currentVideoKpi" class="loading-container glass-card">
+    <div class="spinner"></div>
+    <p>Calcul des indicateurs de performance...</p>
+  </div>
+
+  <!-- ==========================================
+       CONTENU KPI
+       ========================================== -->
+  <div *ngIf="!loading && currentVideoKpi" class="kpi-content">
+
+    <!-- 🎯 JAUGES PRINCIPALES -->
+    <div class="gauges-section">
+      <div class="gauge-card glass-card">
+        <div class="gauge-header">
+          <h3>TRS Global</h3>
+          <p>Taux de Rendement Synthétique</p>
+        </div>
+        <div class="gauge-canvas-wrapper">
+          <canvas id="gaugeTRS"></canvas>
+        </div>
+        <div class="gauge-footer">
+          <span class="gauge-status" [class]="currentVideoKpi.kpis.trs >= 85 ? 'status-good' : currentVideoKpi.kpis.trs >= 70 ? 'status-warning' : 'status-critical'">
+            {{ currentVideoKpi.kpis.trs >= 85 ? 'Excellent' : currentVideoKpi.kpis.trs >= 70 ? 'Acceptable' : 'Critique' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="gauge-card glass-card">
+        <div class="gauge-header">
+          <h3>Efficacité Machines</h3>
+          <p>Machines actives / Total</p>
+        </div>
+        <div class="gauge-canvas-wrapper">
+          <canvas id="gaugeMachines"></canvas>
+        </div>
+        <div class="gauge-footer">
+          <span class="gauge-detail">
+            {{ currentVideoKpi.raw.machines }} / {{ currentVideoKpi.raw.machines + currentVideoKpi.raw.machinesStopped }}
+          </span>
+        </div>
+      </div>
+
+      <div class="gauge-card glass-card">
+        <div class="gauge-header">
+          <h3>Activité Employés</h3>
+          <p>Taux d'activité RH</p>
+        </div>
+        <div class="gauge-canvas-wrapper">
+          <canvas id="gaugeEmployees"></canvas>
+        </div>
+        <div class="gauge-footer">
+          <span class="gauge-detail">
+            {{ currentVideoKpi.raw.employesActifs || currentVideoKpi.raw.employees }} actifs
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📊 CARTES KPI PAR CATÉGORIE -->
+    
+    <!-- PRODUCTION -->
+    <div class="kpi-category-section">
+      <div class="category-header">
+        <h2><i class="fas fa-industry"></i> Production</h2>
+        <span class="category-badge">{{ productionKPIs.length }} indicateurs</span>
+      </div>
+      <div class="kpi-cards-grid">
+        <div class="kpi-card glass-card" *ngFor="let kpi of productionKPIs">
+          <div class="card-icon" [style.background]="kpi.color">
+            <i [class]="kpi.icon"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">{{ kpi.label }}</div>
+            <div class="card-value-row">
+              <span class="card-value" [style.color]="kpi.color">
+                {{ kpi.value }}<span class="unit">{{ kpi.unit }}</span>
+              </span>
+              <span class="card-trend" *ngIf="kpi.trend" 
+                    [class.positive]="kpi.trend === 'up'"
+                    [class.negative]="kpi.trend === 'down'">
+                <i [class]="getTrendIcon(kpi.trend)"></i>
+                {{ kpi.trendValue }}%
+              </span>
+            </div>
+            <div class="card-description">{{ kpi.description }}</div>
+            <div class="card-progress">
+              <div class="progress-fill" 
+                   [style.width.%]="typeof kpi.value === 'number' ? kpi.value : 0"
+                   [style.background]="kpi.color"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESSOURCES HUMAINES -->
+    <div class="kpi-category-section">
+      <div class="category-header">
+        <h2><i class="fas fa-users"></i> Ressources Humaines</h2>
+        <span class="category-badge">{{ rhKPIs.length }} indicateurs</span>
+      </div>
+      <div class="kpi-cards-grid">
+        <div class="kpi-card glass-card" *ngFor="let kpi of rhKPIs">
+          <div class="card-icon" [style.background]="kpi.color">
+            <i [class]="kpi.icon"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">{{ kpi.label }}</div>
+            <div class="card-value-row">
+              <span class="card-value" [style.color]="kpi.color">
+                {{ kpi.value }}<span class="unit">{{ kpi.unit }}</span>
+              </span>
+              <span class="card-trend" *ngIf="kpi.trend"
+                    [class.positive]="kpi.trend === 'up'"
+                    [class.negative]="kpi.trend === 'down'">
+                <i [class]="getTrendIcon(kpi.trend)"></i>
+                {{ kpi.trendValue }}%
+              </span>
+            </div>
+            <div class="card-description">{{ kpi.description }}</div>
+            <div class="card-progress">
+              <div class="progress-fill"
+                   [style.width.%]="typeof kpi.value === 'number' ? kpi.value : 0"
+                   [style.background]="kpi.color"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGISTIQUE -->
+    <div class="kpi-category-section" *ngIf="logistiqueKPIs.length > 0">
+      <div class="category-header">
+        <h2><i class="fas fa-boxes"></i> Logistique</h2>
+        <span class="category-badge">{{ logistiqueKPIs.length }} indicateurs</span>
+      </div>
+      <div class="kpi-cards-grid">
+        <div class="kpi-card glass-card" *ngFor="let kpi of logistiqueKPIs">
+          <div class="card-icon" [style.background]="kpi.color">
+            <i [class]="kpi.icon"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">{{ kpi.label }}</div>
+            <div class="card-value-row">
+              <span class="card-value" [style.color]="kpi.color">
+                {{ kpi.value }}<span class="unit">{{ kpi.unit }}</span>
+              </span>
+            </div>
+            <div class="card-description">{{ kpi.description }}</div>
+            <div class="card-progress">
+              <div class="progress-fill"
+                   [style.width.%]="typeof kpi.value === 'number' ? kpi.value : 0"
+                   [style.background]="kpi.color"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUALITÉ & PERFORMANCE -->
+    <div class="kpi-category-section quality">
+      <div class="category-header">
+        <h2><i class="fas fa-medal"></i> Qualité & Performance</h2>
+        <span class="category-badge highlight">{{ qualiteKPIs.length }} indicateurs</span>
+      </div>
+      <div class="kpi-cards-grid">
+        <div class="kpi-card glass-card quality" *ngFor="let kpi of qualiteKPIs">
+          <div class="card-icon" [style.background]="kpi.color">
+            <i [class]="kpi.icon"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">{{ kpi.label }}</div>
+            <div class="card-value-row">
+              <span class="card-value" [style.color]="kpi.color">
+                {{ kpi.value }}<span class="unit">{{ kpi.unit }}</span>
+              </span>
+              <span class="card-trend" *ngIf="kpi.trend"
+                    [class.positive]="kpi.trend === 'up'"
+                    [class.negative]="kpi.trend === 'down'">
+                <i [class]="getTrendIcon(kpi.trend)"></i>
+              </span>
+            </div>
+            <div class="card-description">{{ kpi.description }}</div>
+            <div class="card-progress">
+              <div class="progress-fill"
+                   [style.width.%]="typeof kpi.value === 'number' ? kpi.value : 0"
+                   [style.background]="kpi.color"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📈 GRAPHIQUES ANALYTIQUES -->
+    <div class="charts-section">
+      
+      <!-- Radar Performance -->
+      <div class="chart-container glass-card">
+        <div class="chart-header">
+          <h3><i class="fas fa-chart-radar"></i> Performance Globale</h3>
+          <span class="chart-badge">Radar 5 axes</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tendances TRS -->
+      <div class="chart-container glass-card">
+        <div class="chart-header">
+          <h3><i class="fas fa-chart-line"></i> Évolution TRS</h3>
+          <span class="chart-badge">{{ historicalKpis.length }} dernières vidéos</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Qualité -->
+      <div class="chart-container glass-card">
+        <div class="chart-header">
+          <h3><i class="fas fa-award"></i> Indicateurs Qualité</h3>
+          <span class="chart-badge">En pourcentage (%)</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="qualityChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 🎯 NIVEAU DE RISQUE -->
+    <div class="risk-section">
+      <div class="risk-card glass-card" [style.border-left-color]="getRiskColor(currentVideoKpi.kpis.riskLevel)">
+        <div class="risk-header">
+          <div class="risk-icon" [style.background]="getRiskColor(currentVideoKpi.kpis.riskLevel)">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div>
+            <h3>Niveau de Risque Global</h3>
+            <p>Analyse des facteurs de performance</p>
+          </div>
+        </div>
+        <div class="risk-body">
+          <div class="risk-badge" 
+               [style.background]="getRiskColor(currentVideoKpi.kpis.riskLevel) + '20'"
+               [style.color]="getRiskColor(currentVideoKpi.kpis.riskLevel)">
+            {{ getRiskLabel(currentVideoKpi.kpis.riskLevel) }}
+          </div>
+          <div class="risk-score">
+            <span class="score-label">Score de risque</span>
+            <span class="score-value">{{ currentVideoKpi.kpis.riskScore }}/100</span>
+          </div>
+          <div class="risk-progress">
+            <div class="risk-progress-fill" 
+                 [style.width.%]="currentVideoKpi.kpis.riskScore"
+                 [style.background]="getRiskColor(currentVideoKpi.kpis.riskLevel)"></div>
+          </div>
+          <p class="risk-description">
+            <span *ngIf="currentVideoKpi.kpis.riskLevel === 'high'">
+              ⚠️ Performance critique. Actions correctives immédiates requises sur les machines et le personnel.
+            </span>
+            <span *ngIf="currentVideoKpi.kpis.riskLevel === 'medium'">
+              ⚡ Performance en baisse. Surveillance renforcée recommandée.
+            </span>
+            <span *ngIf="currentVideoKpi.kpis.riskLevel === 'low'">
+              ✅ Tous les indicateurs sont dans les objectifs. Performance optimale.
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       NO DATA
+       ========================================== -->
+  <div *ngIf="!loading && !currentVideoKpi" class="no-data glass-card">
+    <i class="fas fa-chart-line"></i>
+    <p>Aucune donnée de performance disponible</p>
+    <p class="no-data-subtitle">Uploadez une vidéo pour voir les KPI</p>
+    <button class="btn-primary" (click)="refresh()">
+      <i class="fas fa-sync"></i>
+      Recharger
+    </button>
+  </div>
+
+</div>

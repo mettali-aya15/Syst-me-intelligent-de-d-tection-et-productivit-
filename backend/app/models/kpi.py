@@ -1,70 +1,136 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modèles Pydantic pour les KPIs
+Modèles Pydantic pour les KPI
+Sections optionnelles selon les détections
+AVEC KPI Tables et Clients
+AVEC périodes dynamiques : heure, jour, semaine, mois
 """
 
-from pydantic import BaseModel, Field, ConfigDict
-from datetime import datetime, date
-from typing import List, Optional
+from pydantic import BaseModel, Field, BeforeValidator
+from typing import Optional, Annotated, Literal
+from datetime import datetime
 from bson import ObjectId
 
-
-class EmployeeMetrics(BaseModel):
-    """Métriques employés"""
-    total: int = 0
-    present: int = 0
-    absent: int = 0
-    temp_workers: int = 0
+# Convertisseur PyObjectId pour Pydantic v2
+PyObjectId = Annotated[str, BeforeValidator(lambda x: str(x) if isinstance(x, ObjectId) else x)]
 
 
-class MachineMetrics(BaseModel):
-    """Métriques machines"""
-    total: int = 0
-    active: int = 0
-    stopped: int = 0
+class KPIProductionComplete(BaseModel):
+    """KPI Production complets"""
+    taux_productivite: float
+    objectif_production: float
+    taux_conformite: float
+    cadence_production: float
+    unites_produites: int
+    objectif_unites: int
+    produits_conformes: int
+    total_produits: int
 
 
-class TableMetrics(BaseModel):
-    """Métriques tables"""
-    total: int = 0
-    occupied: int = 0
-    free: int = 0
+class KPIMachinesComplete(BaseModel):
+    """KPI Machines complets"""
+    trs: float
+    disponibilite: float
+    performance: float
+    qualite: float
+    taux_panne: float
+    mtbf: float
+    mttr: float
+    total_machines: int
+    machines_actives: int
+    machines_arretees: int
+    temps_productif: float
+    temps_total: float
 
 
-class ProductionMetrics(BaseModel):
-    """Métriques production"""
-    total_produced: int = 0
-    hourly_rate: float = 0.0
+class KPIEmployesComplete(BaseModel):
+    """KPI Employés complets"""
+    taux_presence: float
+    taux_activite: float
+    productivite_par_employe: float
+    taux_inactivite: float
+    total_employes: int
+    employes_presents: int
+    employes_actifs: int
+    employes_inactifs: int
 
+
+class KPITablesComplete(BaseModel):
+    """KPI Tables complets"""
+    total_tables: int
+    tables_occupees: int
+    tables_vides: int
+    taux_occupation: float
+
+
+class KPIClientsComplete(BaseModel):
+    """KPI Clients complets"""
+    total_clients: int
+    clients_en_attente: int
+    clients_servis: int
+    taux_service: float
+
+
+class KPIGlobal(BaseModel):
+    """
+    KPI Global avec sections OPTIONNELLES
+    Les sections sont présentes uniquement si les objets correspondants sont détectés
+    
+    PÉRIODES SUPPORTÉES :
+    - "heure" : KPI d'une heure spécifique (ex: 14h-15h)
+    - "jour" : KPI d'une journée (ex: 12 mai 2026)
+    - "semaine" : KPI d'une semaine (ex: semaine 19/2026)
+    - "mois" : KPI d'un mois (ex: mai 2026)
+    """
+    id: Optional[PyObjectId] = Field(None, alias="_id")
+    date: datetime
+    
+    # ✅ NOUVEAU : Type de période
+    periode: Literal["heure", "jour", "semaine", "mois"] = Field(
+        ..., 
+        description="Type de période: heure, jour, semaine ou mois"
+    )
+    
+    date_debut: datetime
+    date_fin: datetime
+    
+    # Sections optionnelles
+    production: Optional[KPIProductionComplete] = None
+    machines: Optional[KPIMachinesComplete] = None
+    employes: Optional[KPIEmployesComplete] = None
+    tables: Optional[KPITablesComplete] = None
+    clients: Optional[KPIClientsComplete] = None
+    
+    nombre_videos: int
+    created_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+
+# ========== CLASSES POUR LES RAPPORTS ==========
 
 class KPISnapshot(BaseModel):
-    """Snapshot KPI horaire"""
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    
-    id: Optional[ObjectId] = Field(default=None, alias="_id")
-    date: date
-    hour: int
-    employees: EmployeeMetrics
-    machines: MachineMetrics
-    tables: TableMetrics
-    production: ProductionMetrics
-    productivity_rate: float = 0.0
-    video_ids: List[str] = []
-    created_at: datetime = Field(default_factory=datetime.now)
+    """Snapshot des KPI pour un rapport"""
+    production: Optional[KPIProductionComplete] = None
+    machines: Optional[KPIMachinesComplete] = None
+    employes: Optional[KPIEmployesComplete] = None
+    tables: Optional[KPITablesComplete] = None
+    clients: Optional[KPIClientsComplete] = None
 
 
 class DailyReport(BaseModel):
-    """Rapport journalier"""
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    
-    id: Optional[ObjectId] = Field(default=None, alias="_id")
-    date: date
-    summary: dict = {}
-    employees_present: List[str] = []
-    employees_absent: List[str] = []
-    total_videos_processed: int = 0
-    total_detections: int = 0
-    productivity_score: float = 0.0
-    hourly_snapshots: List[dict] = []
-    generated_at: datetime = Field(default_factory=datetime.now)
+    """Rapport quotidien"""
+    id: Optional[PyObjectId] = Field(None, alias="_id")
+    date: datetime
+    kpi: KPISnapshot
+    summary: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}

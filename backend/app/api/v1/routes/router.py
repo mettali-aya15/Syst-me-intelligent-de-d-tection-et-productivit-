@@ -19,6 +19,7 @@ from .alerts import router as alerts_router
 from .reports import router as reports_router
 from .websocket_route import router as websocket_router
 
+
 api_router = APIRouter()
 
 # Authentification

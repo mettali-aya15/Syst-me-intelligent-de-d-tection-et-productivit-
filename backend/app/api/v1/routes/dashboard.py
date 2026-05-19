@@ -8,8 +8,7 @@ Vue d'ensemble consolidée
 from fastapi import APIRouter, HTTPException
 from datetime import datetime, date
 
-from app.services.analytics import KPICalculator, ProductivityService
-from app.services.logic import MachineLogic
+from app.services.analytics import KPIService, ProductivityService
 from core.database import Database
 
 import logging
@@ -28,10 +27,10 @@ async def get_dashboard_overview():
     """
     try:
         # KPIs temps réel
-        realtime_metrics = await KPICalculator.get_realtime_metrics()
+        realtime_metrics = await KPIService.get_realtime_metrics()
         
         # Résumé machines
-        machines_summary = await MachineLogic.get_machines_status_summary()
+        machines_summary = await KPIService.get_machines_status_summary()
         
         # Employés
         employees_collection = Database.get_collection("employees")

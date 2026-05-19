@@ -1,105 +1,66 @@
-<app-admin-dashboard></app-admin-dashboard>
-
-<!-- dashboard.component.html -->
-<div class="dashboard-container">
+<!-- Container principal Admin -->
+<div class="admin-layout">
   
-  <!-- En-tête avec un style plus léger -->
-  <header class="page-header">
-    <div class="header-content">
-      <h2 class="page-title">Tableau de Bord</h2>
-      <p class="page-subtitle">Vue d'ensemble des performances en temps réel</p>
+  <!-- Navbar professionnelle -->
+  <nav class="admin-navbar">
+    <div class="navbar-container">
+      <!-- Logo -->
+      <div class="navbar-brand">
+        <span class="brand-icon">📊</span>
+        <div class="brand-text">
+          <span class="brand-name">CAMIA Factory</span>
+          <span class="brand-tagline">Analyse Intelligente</span>
+        </div>
+      </div>
+
+      <!-- Menu Navigation -->
+      <ul class="navbar-menu">
+        <li class="nav-item">
+          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link">
+            <span class="nav-icon">🏠</span>
+            <span>Tableau de bord</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a routerLink="/admin/kpi" routerLinkActive="active" class="nav-link">
+            <span class="nav-icon">📊</span>
+            <span>Indicateurs clés de performance (KPI)</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a routerLink="/admin/videos" routerLinkActive="active" class="nav-link">
+            <span class="nav-icon">🎥</span>
+            <span>Vidéos</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a routerLink="/admin/notifications" routerLinkActive="active" class="nav-link">
+            <span class="nav-icon">🔔</span>
+            <span>Notifications</span>
+            <span class="nav-badge">3</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- Section utilisateur -->
+      <div class="navbar-user">
+        <div class="user-profile">
+          <div class="user-avatar">AD</div>
+          <div class="user-info">
+            <span class="user-name">Administrateur</span>
+            <span class="user-role">Admin</span>
+          </div>
+        </div>
+        <button class="btn-logout" (click)="logout()">
+          <span class="logout-icon">🚪</span>
+        </button>
+      </div>
     </div>
-    <!-- Optionnel : bouton d'action ou filtre date ici -->
-    <div class="header-actions">
-      <span class="date-badge">{{ now | date:'dd MMMM yyyy' }}</span>
-    </div>
-  </header>
+  </nav>
 
-  @if (kpis$ | async; as kpis) {
-    
-    <!-- Grille des KPIs -->
-    <section class="kpi-grid">
-      @for (kpi of kpis; track kpi.id) {
-        <!-- Ajout de la classe dynamique pour la couleur de bordure/fond -->
-        <div class="kpi-card" [ngClass]="getTrendClass(kpi.trend)">
-          
-          <div class="kpi-top">
-            <div class="kpi-icon-wrapper">
-              <!-- On utilise des icônes ou emojis stylisés -->
-              <span class="kpi-icon">{{ '📊' }}</span>
-            </div>
-            
-            <!-- Badge de variation (Trend) -->
-            <div class="trend-badge" [class.positive]="kpi.changePercent > 0" [class.negative]="kpi.changePercent < 0">
-              <i class="fas" [class.fa-arrow-up]="kpi.changePercent > 0" [class.fa-arrow-down]="kpi.changePercent < 0"></i>
-              <span>{{ kpi.changePercent | number:'1.1-1' }}%</span>
-            </div>
-          </div>
+  <!-- Contenu principal -->
+  <main class="admin-main">
+    <router-outlet></router-outlet>
+  </main>
 
-          <div class="kpi-body">
-            <span class="kpi-label">{{ kpi.name }}</span>
-            <div class="kpi-metric">
-              <h3 class="kpi-value">{{ kpi.value | number:'1.0-1' }}</h3>
-              <span class="kpi-unit">{{ kpi.unit }}</span>
-            </div>
-          </div>
-
-          <div class="kpi-footer">
-            <div class="progress-info">
-              <span>Objectif: {{ kpi.target | number:'1.0-0' }}</span>
-              <span>{{ getProgressPercentage(kpi) | number:'1.0-0' }}%</span>
-            </div>
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill" 
-                   [style.width.%]="getProgressPercentage(kpi)">
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-    </section>
-
-    <!-- Grille des Graphiques -->
-    <section class="charts-section">
-      <!-- Ligne 1 : Production & Efficacité -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>📦 Production Totale</h3>
-          <button class="icon-btn"><i class="fas fa-ellipsis-h"></i></button>
-        </div>
-        <div class="chart-body">
-          <canvas #productionChart></canvas>
-        </div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>📈 Efficacité Globale</h3>
-          <button class="icon-btn"><i class="fas fa-ellipsis-h"></i></button>
-        </div>
-        <div class="chart-body">
-          <canvas #efficiencyChart></canvas>
-        </div>
-      </div>
-
-      <!-- Ligne 2 : Défauts & Temps d'arrêt -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>⚠️ Taux de Défauts</h3>
-        </div>
-        <div class="chart-body">
-          <canvas #defectsChart></canvas>
-        </div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>⏱️ Temps d'Arrêt</h3>
-        </div>
-        <div class="chart-body">
-          <canvas #downtimeChart></canvas>
-        </div>
-      </div>
-    </section>
-  }
 </div>

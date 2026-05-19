@@ -1,0 +1,169 @@
+<div class="notifications-page">
+  <button class="back-btn" (click)="goBack()">
+    <i class="fas fa-arrow-left"></i>
+    Retour au dashboard
+  </button>
+
+  <div class="page-header">
+    <div class="header-content">
+      <h1>🔔 Notifications</h1>
+      <p>Centre de notifications et alertes</p>
+    </div>
+    <div class="header-actions">
+      @if (notifications.length > 0) {
+        <button class="btn-action" (click)="markAllAsRead()">
+          <i class="fas fa-check-double"></i>
+          Tout marquer comme lu
+        </button>
+        <button class="btn-action btn-danger" (click)="deleteAll()">
+          <i class="fas fa-trash-alt"></i>
+          Tout supprimer
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div 
+      class="stat-box" 
+      [class.active]="currentFilter === 'all'"
+      (click)="applyFilter('all')">
+      <div class="stat-icon stat-all">
+        <i class="fas fa-bell"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">TOTAL</div>
+        <div class="stat-value">{{ totalCount }}</div>
+      </div>
+    </div>
+
+    <div 
+      class="stat-box" 
+      [class.active]="currentFilter === 'unread'"
+      (click)="applyFilter('unread')">
+      <div class="stat-icon stat-unread">
+        <i class="fas fa-envelope"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">NON LUES</div>
+        <div class="stat-value">{{ unreadCount }}</div>
+      </div>
+    </div>
+
+    <div 
+      class="stat-box" 
+      [class.active]="currentFilter === 'priority'"
+      (click)="applyFilter('priority')">
+      <div class="stat-icon stat-priority">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">PRIORITÉ HAUTE</div>
+        <div class="stat-value">{{ priorityCount }}</div>
+      </div>
+    </div>
+
+    <div 
+      class="stat-box" 
+      [class.active]="currentFilter === 'today'"
+      (click)="applyFilter('today')">
+      <div class="stat-icon stat-today">
+        <i class="fas fa-calendar-day"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">AUJOURD'HUI</div>
+        <div class="stat-value">{{ todayCount }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notifications-container">
+    @if (filteredNotifications.length === 0) {
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <h3>Aucune notification</h3>
+        <p>
+          @if (currentFilter === 'all') {
+            Vous n'avez aucune notification pour le moment
+          } @else if (currentFilter === 'unread') {
+            Toutes vos notifications ont été lues
+          } @else if (currentFilter === 'priority') {
+            Aucune notification prioritaire
+          } @else {
+            Aucune notification aujourd'hui
+          }
+        </p>
+      </div>
+    } @else {
+      <div class="notifications-list">
+        @for (notif of filteredNotifications; track notif.id) {
+          <div 
+  class="notification-card"
+  [class.unread]="!notif.read"
+  [class.is-new]="notif.isNew"
+  [class.notif-success]="notif.type === 'success'"
+  [class.notif-warning]="notif.type === 'warning'"
+  [class.notif-error]="notif.type === 'error'"
+  [class.notif-info]="notif.type === 'info'"
+  (click)="navigateToLink(notif)">
+            
+            <div class="notif-icon-wrapper">
+              <div class="notif-icon">
+                <i [class]="getIconClass(notif.type)"></i>
+              </div>
+              @if (!notif.read) {
+                <span class="unread-dot"></span>
+              }
+            </div>
+
+            <div class="notif-body">
+              <div class="notif-header">
+                <h4 class="notif-title">{{ notif.title }}</h4>
+                <span 
+                  class="notif-priority" 
+                  [class.priority-error]="notif.type === 'error'"
+                  [class.priority-warning]="notif.type === 'warning'"
+                  [class.priority-success]="notif.type === 'success'"
+                  [class.priority-info]="notif.type === 'info'">
+                  {{ getPriorityLabel(notif.type) }}
+                </span>
+              </div>
+
+              <p class="notif-message">{{ notif.message }}</p>
+
+              <div class="notif-footer">
+                <span class="notif-time">
+                  <i class="fas fa-clock"></i>
+                  {{ getTimeAgo(notif.timestamp) }}
+                </span>
+                @if (notif.link) {
+                  <a class="notif-link" [href]="notif.link" (click)="$event.stopPropagation()">
+                    <i class="fas fa-arrow-right"></i>
+                    Voir les détails
+                  </a>
+                }
+              </div>
+            </div>
+
+            <div class="notif-actions">
+              @if (!notif.read) {
+                <button 
+                  class="btn-mark-read"
+                  (click)="markAsRead(notif); $event.stopPropagation()"
+                  title="Marquer comme lu">
+                  <i class="fas fa-check"></i>
+                </button>
+              }
+              <button 
+                class="btn-delete"
+                (click)="deleteNotification(notif, $event)"
+                title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

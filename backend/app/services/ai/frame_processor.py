@@ -65,7 +65,7 @@ class FrameProcessor:
             writer = None
             if save_annotated and output_path:
                 Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                fourcc = cv2.VideoWriter_fourcc(*'avc1')
                 writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
             
             frames_detections = []
@@ -75,7 +75,8 @@ class FrameProcessor:
             
             while True:
                 ret, frame = cap.read()
-                if not ret: break
+                if not ret:
+                    break
                 
                 timestamp = frame_number / fps if fps > 0 else 0
                 detections = self.detector.detect_frame(
@@ -101,7 +102,8 @@ class FrameProcessor:
                 frame_number += 1
             
             cap.release()
-            if writer: writer.release()
+            if writer:
+                writer.release()
             
             logger.info(f"✅ Traitement terminé : {frame_number} frames analysées")
             return frames_detections, metadata
@@ -119,7 +121,12 @@ class FrameProcessor:
         progress_callback=None
     ) -> tuple:
         """
-        Traiter vidéo avec 10 lignes + DÉDUPLICATION DES IDs
+        Traiter vidéo avec comptage par ligne - VERSION CORRIGÉE
+        
+        STRATÉGIE :
+        - ObjectCounter pour les produits (si model_type = objects/both)
+        - draw_detections pour les employés (si model_type = employees/both)
+        - Pas de boxes en double
         """
         cap = cv2.VideoCapture(video_path)
         
@@ -137,7 +144,7 @@ class FrameProcessor:
             for i in range(1, 11)
         }
         
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')
         out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
         
         frames_detections = []
@@ -145,7 +152,7 @@ class FrameProcessor:
         
         object_model = self.detector.get_object_model()
         
-        # Initialiser compteurs de lignes (pour les produits)
+        # Initialiser compteurs de lignes
         counters = {}
         line_counts = {}
         
@@ -161,7 +168,7 @@ class FrameProcessor:
         global_product_ids = set()
         
         logger.info("="*70)
-        logger.info(f"📏 Comptage avec DÉDUPLICATION des IDs")
+        logger.info(f"📏 Comptage optimisé (model_type={model_type})")
         logger.info("="*70)
         
         while cap.isOpened():
@@ -169,62 +176,74 @@ class FrameProcessor:
             if not success:
                 break
             
-            frame_detections = []
             timestamp = frame_idx / fps
+            all_detections = []
             
-            # --- 1. COMPTAGE PRODUITS PAR LIGNES ---
-            if model_type in ["objects", "both"]:
-                annotated_frames = {}
-                
-                for line_name, counter in counters.items():
-                    frame_copy = frame_original.copy()
-                    results = counter.process(frame_copy)
-                    annotated_frames[line_name] = results.plot_im
-                    
-                    # Mise à jour stats
-                    line_counts[line_name]["IN"] = results.in_count
-                    line_counts[line_name]["OUT"] = results.out_count
-                    line_counts[line_name]["TOTAL"] = results.in_count + results.out_count
-                    
-                    # Collecte IDs uniques produits
-                    if hasattr(counter, 'counted_ids') and counter.counted_ids:
-                        for tid in counter.counted_ids:
-                            global_product_ids.add(tid)
-                
-                # On utilise l'image annotée de la ligne centrale comme base visuelle
-                frame_visual = annotated_frames.get("ligne_5", frame_original.copy())
-            else:
-                frame_visual = frame_original.copy()
-            
-            # --- 2. DÉTECTION GÉNÉRALE (EMPLOYÉS & MACHINES) ---
-            # On appelle le détecteur qui gère le filtrage (noms vs objets)
-            # Note: detect_frame now ALWAYS runs employee model to ensure we get humans
+            # ========== COLLECTE DES DONNÉES (sans affichage) ==========
             general_detections = self.detector.detect_frame(
                 frame_original, 
                 conf=conf, 
                 model_type=model_type,
                 frame_idx=frame_idx
             )
-            frame_detections.extend(general_detections)
+            all_detections.extend(general_detections)
             
-            # Enregistrement des données
+            # ✅ Sauvegarder TOUTES les détections
             frames_detections.append(
                 FrameDetection(
                     frame_number=frame_idx,
                     timestamp=timestamp,
-                    detections=frame_detections
+                    detections=all_detections
                 )
             )
             
-            # --- 3. ANNOTATION VISUELLE ---
-            # Dessiner les détections générales sur la frame visuelle
-            final_frame = self.draw_detections(frame_visual, frame_detections)
+            # ========== AFFICHAGE SELON model_type ==========
+            frame_display = frame_original.copy()
             
-            # Afficher compteur produit global
-            cv2.putText(final_frame, f"Produits Uniques: {len(global_product_ids)}", 
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            # CAS 1 : model_type contient "objects" → Utiliser ObjectCounter
+            if model_type in ["objects", "both"]:
+                for line_name, counter in counters.items():
+                    frame_copy = frame_original.copy()
+                    results = counter.process(frame_copy)
+                    
+                    # Utiliser ligne centrale pour affichage
+                    if line_name == "ligne_5":
+                        frame_display = results.plot_im
+                    
+                    # Stats
+                    line_counts[line_name]["IN"] = results.in_count
+                    line_counts[line_name]["OUT"] = results.out_count
+                    line_counts[line_name]["TOTAL"] = results.in_count + results.out_count
+                    
+                    # IDs uniques
+                    if hasattr(counter, 'counted_ids') and counter.counted_ids:
+                        global_product_ids.update(counter.counted_ids)
+                
+                # Si model_type = "both" → Dessiner AUSSI les employés (sans produits)
+                if model_type == "both":
+                    non_product_detections = [
+                        det for det in all_detections 
+                        if det.class_name.lower() != 'produit'
+                    ]
+                    frame_display = self.draw_detections(frame_display, non_product_detections)
             
-            out.write(final_frame)
+            # CAS 2 : model_type = "employees" → Dessiner TOUTES les détections
+            elif model_type == "employees":
+                frame_display = self.draw_detections(frame_display, all_detections)
+            
+            # Ajouter compteur produits si applicable
+            if model_type in ["objects", "both"] and len(global_product_ids) > 0:
+                cv2.putText(
+                    frame_display, 
+                    f"Produits Uniques: {len(global_product_ids)}", 
+                    (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 
+                    1.0, 
+                    (0, 255, 0), 
+                    2
+                )
+            
+            out.write(frame_display)
             frame_idx += 1
             
             if progress_callback and frame_idx % 30 == 0:
@@ -233,7 +252,7 @@ class FrameProcessor:
         cap.release()
         out.release()
         
-        # Préparation des résultats finaux
+        # Résultats
         final_counts = {
             "produit": {
                 "TOTAL": len(global_product_ids),
@@ -255,26 +274,38 @@ class FrameProcessor:
         return frames_detections, metadata, final_counts
     
     def draw_detections(self, frame: np.ndarray, detections: List[Detection]) -> np.ndarray:
-        """Dessine les boîtes et les IDs sur la frame"""
+        """
+        Dessine les boîtes de détection sur la frame
+        
+        Args:
+            frame: Frame source (peut déjà contenir des annotations)
+            detections: Liste des détections à dessiner
+        
+        Returns:
+            Frame annotée
+        """
         annotated = frame.copy()
         h, w = frame.shape[:2]
         
         for det in detections:
-            # Convert normalized coords back to pixels for drawing
+            # Conversion coordonnées normalisées → pixels
             x1 = int(det.bbox.x * w)
             y1 = int(det.bbox.y * h)
             x2 = int((det.bbox.x + det.bbox.width) * w)
             y2 = int((det.bbox.y + det.bbox.height) * h)
             
+            # Couleur selon la classe
             color = self.detector.get_color(det.class_name)
+            
+            # Dessiner le rectangle
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
             
-            # Label with ID if available
+            # Label avec ID si disponible
             label = f"{det.class_name}"
             if det.track_id is not None:
                 label += f" #{det.track_id}"
             
-            # Background for text
+            # Background pour le texte
             (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
             cv2.rectangle(annotated, (x1, y1 - label_h - 10), (x1 + label_w, y1), color, -1)
             cv2.putText(annotated, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)

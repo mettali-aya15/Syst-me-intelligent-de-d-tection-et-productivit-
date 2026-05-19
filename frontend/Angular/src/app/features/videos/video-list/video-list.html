@@ -1,0 +1,189 @@
+<div class="list-container">
+  <!-- Bouton retour -->
+  <a routerLink="/admin/dashboard" class="back-btn">
+    <i class="fas fa-arrow-left"></i>
+    Retour au dashboard
+  </a>
+
+  <!-- Header -->
+  <div class="list-header">
+    <div class="header-content">
+      <h2>🎬 Vidéos Analysées</h2>
+      
+    </div>
+    <a routerLink="/admin/videos/upload" class="btn-primary">
+      <i class="fas fa-upload"></i>
+      Uploader une vidéo
+    </a>
+  </div>
+
+  <!-- Filtres (AVEC MODEL_TYPE REMIS) -->
+  <div class="filters-card">
+    <div class="filter-group">
+      <label>🔍 RECHERCHE</label>
+      <input 
+        type="text" 
+        placeholder="Nom du fichier..."
+        [(ngModel)]="searchQuery"
+        (input)="applyFilters()"
+      />
+    </div>
+
+    <div class="filter-group">
+      <label>📊 STATUT</label>
+      <select [(ngModel)]="filterStatus" (change)="applyFilters()">
+        <option value="all">Tous les statuts</option>
+        <option value="uploaded">📤 Uploadé</option>
+        <option value="processing">⏳ En cours</option>
+        <option value="completed">✅ Terminé</option>
+        <option value="failed">❌ Erreur</option>
+      </select>
+    </div>
+
+    <!-- ✅ FILTRE MODEL REMIS -->
+    <div class="filter-group">
+      <label>🎯 MODÈLE</label>
+      <select [(ngModel)]="filterModel" (change)="applyFilters()">
+        <option value="all">Tous les modèles</option>
+        <option value="objects">📦 Objets</option>
+        <option value="employees">👥 Employés</option>
+        <option value="both">🎯 Les deux</option>
+      </select>
+    </div>
+
+    <button class="btn-secondary" (click)="loadVideos()">
+      <i class="fas fa-sync-alt"></i>
+      Actualiser
+    </button>
+
+    <button class="btn-reset" (click)="resetFilters()">
+      <i class="fas fa-redo"></i>
+      Réinitialiser
+    </button>
+  </div>
+
+  <!-- Message d'erreur -->
+  @if (errorMessage) {
+    <div class="alert alert-error">
+      <i class="fas fa-exclamation-circle"></i>
+      {{ errorMessage }}
+    </div>
+  }
+
+  <!-- Loading -->
+  @if (isLoading) {
+    <div class="loading-container">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des vidéos...</p>
+    </div>
+  }
+
+  <!-- Grille de vidéos -->
+  @if (!isLoading && filteredVideos.length > 0) {
+    <div class="videos-grid">
+      @for (video of filteredVideos; track video._id) {
+        <div class="video-card" [routerLink]="['/admin/videos', video._id]">
+          
+          <!-- Header de la carte -->
+          <div class="video-header">
+            <span class="status-badge" [ngClass]="getStatusClass(video.status)">
+              {{ getStatusLabel(video.status) }}
+            </span>
+            <button 
+              class="delete-btn"
+              (click)="deleteVideo(video, $event)"
+              title="Supprimer"
+            >
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+
+          <!-- Corps de la carte -->
+          <div class="video-body">
+            <h3 class="video-title" [title]="video.filename">
+              {{ video.filename }}
+            </h3>
+            
+            <!-- Métadonnées -->
+            <div class="video-meta">
+              <span><i class="fas fa-clock"></i> {{ formatDuration(video.duration) }}</span>
+              <span><i class="fas fa-film"></i> {{ video.fps }} FPS</span>
+              <span><i class="fas fa-images"></i> {{ video.total_frames }} frames</span>
+            </div>
+
+            <!-- Badge modèle -->
+            <div class="video-model">
+              <span class="model-badge">
+                {{ getModelLabel(video.model_type) }}
+              </span>
+            </div>
+
+            <!-- Résultats -->
+            @if (video.status === 'completed' && hasDetections(video)) {
+              <div class="video-results">
+                <div class="result-stat">
+                  <span class="stat-label">Objets détectés</span>
+                  <span class="stat-value">{{ getTotalUniqueObjects(video) }}</span>
+                </div>
+                
+                <div class="top-classes">
+                  @for (classInfo of getTopClasses(video); track classInfo) {
+                    <span class="class-tag">{{ classInfo }}</span>
+                  }
+                </div>
+              </div>
+            } @else if (video.status === 'completed' && !hasDetections(video)) {
+              <div class="no-detections">
+                <i class="fas fa-info-circle"></i>
+                <span>Aucune détection trouvée</span>
+              </div>
+            } @else if (video.status === 'processing') {
+              <div class="processing-state">
+                <i class="fas fa-cog fa-spin"></i>
+                <span>Analyse en cours...</span>
+              </div>
+            } @else if (video.status === 'uploaded') {
+              <div class="uploaded-state">
+                <i class="fas fa-hourglass-half"></i>
+                <span>En attente d'analyse</span>
+              </div>
+            }
+
+            <!-- Footer -->
+            <div class="video-footer">
+              <small>
+                <i class="fas fa-calendar"></i>
+                {{ video.created_at | date:'dd/MM/yyyy HH:mm' }}
+              </small>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Empty states -->
+  @if (!isLoading && filteredVideos.length === 0 && videos.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-video-slash"></i>
+      <h3>Aucune vidéo trouvée</h3>
+      <p>Uploadez votre première vidéo pour commencer l'analyse !</p>
+      <a routerLink="/admin/videos/upload" class="btn-primary">
+        <i class="fas fa-upload"></i>
+        Uploader une vidéo
+      </a>
+    </div>
+  }
+
+  @if (!isLoading && filteredVideos.length === 0 && videos.length > 0) {
+    <div class="empty-state">
+      <i class="fas fa-filter"></i>
+      <h3>Aucune vidéo ne correspond aux filtres</h3>
+      <p>Essayez de modifier vos critères de recherche</p>
+      <button class="btn-primary" (click)="resetFilters()">
+        <i class="fas fa-redo"></i>
+        Réinitialiser les filtres
+      </button>
+    </div>
+  }
+</div>

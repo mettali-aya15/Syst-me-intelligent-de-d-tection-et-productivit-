@@ -1,0 +1,429 @@
+/* =========================================
+   NAVBAR - STYLE GLASSMORPHISM
+   ========================================= */
+
+.navbar {
+  position: fixed;
+  top: 0; 
+  left: 0; 
+  width: 100%;
+  height: 75px;
+  z-index: 1000;
+  
+  background: rgba(255, 255, 255, 0.6); 
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6); 
+  box-shadow: 0 4px 30px rgba(0, 51, 102, 0.05); 
+  
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  transition: all 0.3s ease;
+}
+
+/* 🏭 BRAND */
+.nav-brand {
+  display: flex; 
+  align-items: center; 
+  gap: 12px;
+  text-decoration: none; 
+  cursor: pointer;
+
+  .brand-icon {
+    width: 38px; 
+    height: 38px;
+    background: linear-gradient(135deg, #0066FF, #3385FF); 
+    border-radius: 10px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    color: white; 
+    font-size: 18px;
+    box-shadow: 0 4px 15px rgba(0, 102, 255, 0.3); 
+  }
+
+  .brand-text {
+    font-size: 20px; 
+    font-weight: 800;
+    color: #0F172A; 
+    letter-spacing: -0.5px;
+  }
+}
+
+/* 🔗 MENU CENTRAL */
+.nav-menu {
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.4); 
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.nav-link {
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  padding: 10px 18px;
+  color: #64748B; 
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600; 
+  font-size: 14px;
+  transition: all 0.3s ease;
+
+  i { font-size: 16px; }
+
+  &:hover {
+    color: #0F172A;
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  &.active {
+    background: #0066FF; 
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.35);
+    
+    i { color: white; }
+  }
+}
+
+/* 👤 ACTIONS */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.8);
+    color: #0F172A;
+  }
+
+  i { font-size: 16px; }
+}
+
+/* =========================================
+   🎯 DROPDOWN PROFIL
+   ========================================= */
+
+.user-dropdown {
+  position: relative;
+}
+
+.user-pill {
+  display: flex; 
+  align-items: center; 
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50px; 
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 12px rgba(0, 51, 102, 0.08);
+  }
+
+  .avatar {
+    width: 34px; 
+    height: 34px; 
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0066FF, #00C6FF);
+    color: white; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    font-size: 13px; 
+    font-weight: 700;
+    border: 2px solid white; 
+  }
+
+  .username {
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #0F172A;
+  }
+
+  .dropdown-arrow {
+    font-size: 10px;
+    color: #64748B;
+    transition: transform 0.3s ease;
+  }
+}
+
+.user-dropdown.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* 📋 MENU DÉROULANT */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 51, 102, 0.15);
+  overflow: hidden;
+  animation: dropdownSlide 0.3s ease-out;
+  z-index: 1001;
+
+  /* Header avec infos utilisateur */
+  .dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.08), rgba(0, 198, 255, 0.08));
+
+    .avatar-large {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0066FF, #00C6FF);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      border: 3px solid white;
+      flex-shrink: 0;
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0;
+
+      .user-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0F172A;
+        margin-bottom: 2px;
+      }
+
+      .user-email {
+        font-size: 12px;
+        color: #64748B;
+        font-weight: 500;
+      }
+    }
+  }
+
+  /* Séparateur */
+  .dropdown-divider {
+    height: 1px;
+    background: rgba(100, 116, 139, 0.15);
+    margin: 8px 0;
+  }
+
+  /* Items du menu */
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #475569;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+
+    i {
+      font-size: 16px;
+      width: 20px;
+      color: #64748B;
+    }
+
+    &:hover {
+      background: rgba(0, 102, 255, 0.08);
+      color: #0066FF;
+
+      i {
+        color: #0066FF;
+      }
+    }
+
+    &.logout {
+      color: #ef4444;
+
+      i {
+        color: #ef4444;
+      }
+
+      &:hover {
+        background: rgba(239, 68, 68, 0.08);
+        color: #dc2626;
+
+        i {
+          color: #dc2626;
+        }
+      }
+    }
+  }
+}
+
+/* Overlay transparent pour fermer le dropdown */
+.dropdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+  background: transparent;
+}
+
+/* Animation d'apparition */
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 1200px) {
+  .nav-link span {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 20px;
+  }
+
+  .nav-brand .brand-text {
+    display: none;
+  }
+
+  .user-pill .username {
+    display: none;
+  }
+
+  .dropdown-menu {
+    min-width: 240px;
+  }
+}
+
+@media (max-width: 480px) {
+  .icon-btn {
+    display: none;
+  }
+}
+/* =========================================
+   🔔 BADGE NOTIFICATIONS
+   ========================================= */
+
+.icon-btn {
+  position: relative;
+
+  .notif-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 0 6px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    animation: pulse-badge 2s infinite;
+  }
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+/* =========================================
+   🔔 BADGE NOTIFICATIONS SUR LIEN
+   ========================================= */
+
+.nav-link {
+  position: relative;
+
+  .nav-link-badge {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    min-width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 0 5px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    animation: pulse-badge 2s infinite;
+  }
+
+  &.active .nav-link-badge {
+    border-color: #0066FF;
+  }
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
