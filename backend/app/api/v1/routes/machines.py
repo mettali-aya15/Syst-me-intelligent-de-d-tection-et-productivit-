@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Routes API pour les machines
-CRUD + Statuts + Anomalies + Disponibilité
+CRUD + Statuts + Anomalies + DisponibilitÃ©
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 
 from app.models.machine import Machine, MachineCreate, MachineUpdate, MachineOut
-from app.services.logic import MachineLogic
 from core.database import Database
 
 import logging
@@ -23,14 +22,14 @@ router = APIRouter()
 @router.post("/", response_model=MachineOut)
 async def create_machine(machine_data: MachineCreate):
     """
-    Créer une nouvelle machine
+    CrÃ©er une nouvelle machine
     
     - **name**: Nom de la machine
     - **type**: Type (coffee_machine, oven, etc.)
-    - **zone**: Zone (production, café, etc.)
+    - **zone**: Zone (production, cafÃ©, etc.)
     
     Returns:
-        Machine créée
+        Machine crÃ©Ã©e
     """
     try:
         machine = await MachineLogic.create_machine(machine_data)
@@ -47,7 +46,7 @@ async def create_machine(machine_data: MachineCreate):
         )
     
     except Exception as e:
-        logger.error(f"❌ Erreur création machine : {e}")
+        logger.error(f"âŒ Erreur crÃ©ation machine : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -94,7 +93,7 @@ async def list_machines(
         ]
     
     except Exception as e:
-        logger.error(f"❌ Erreur listage machines : {e}")
+        logger.error(f"âŒ Erreur listage machines : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -106,7 +105,7 @@ async def get_machine(machine_id: str):
     - **machine_id**: ID de la machine
     
     Returns:
-        Détails de la machine
+        DÃ©tails de la machine
     """
     try:
         collection = Database.get_collection("machines")
@@ -129,19 +128,19 @@ async def get_machine(machine_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erreur récupération machine : {e}")
+        logger.error(f"âŒ Erreur rÃ©cupÃ©ration machine : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/{machine_id}", response_model=MachineOut)
 async def update_machine(machine_id: str, update_data: MachineUpdate):
     """
-    Mettre à jour une machine
+    Mettre Ã  jour une machine
     
     - **machine_id**: ID de la machine
     
     Returns:
-        Machine mise à jour
+        Machine mise Ã  jour
     """
     try:
         machine = await MachineLogic.update_machine(machine_id, update_data)
@@ -163,7 +162,7 @@ async def update_machine(machine_id: str, update_data: MachineUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erreur mise à jour machine : {e}")
+        logger.error(f"âŒ Erreur mise Ã  jour machine : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -184,12 +183,12 @@ async def delete_machine(machine_id: str):
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Machine introuvable")
         
-        return {"message": "Machine supprimée avec succès", "machine_id": machine_id}
+        return {"message": "Machine supprimÃ©e avec succÃ¨s", "machine_id": machine_id}
     
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erreur suppression machine : {e}")
+        logger.error(f"âŒ Erreur suppression machine : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -199,13 +198,13 @@ async def get_machine_availability(
     days: int = Query(7, ge=1, le=30)
 ):
     """
-    Calculer la disponibilité d'une machine
+    Calculer la disponibilitÃ© d'une machine
     
     - **machine_id**: ID de la machine
-    - **days**: Nombre de jours à analyser
+    - **days**: Nombre de jours Ã  analyser
     
     Returns:
-        Métriques de disponibilité
+        MÃ©triques de disponibilitÃ©
     """
     try:
         end_date = datetime.now()
@@ -220,19 +219,19 @@ async def get_machine_availability(
         return availability
     
     except Exception as e:
-        logger.error(f"❌ Erreur calcul disponibilité : {e}")
+        logger.error(f"âŒ Erreur calcul disponibilitÃ© : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{machine_id}/maintenance-prediction")
 async def predict_maintenance(machine_id: str):
     """
-    Prédire le besoin de maintenance
+    PrÃ©dire le besoin de maintenance
     
     - **machine_id**: ID de la machine
     
     Returns:
-        Prédiction de maintenance
+        PrÃ©diction de maintenance
     """
     try:
         prediction = await MachineLogic.predict_maintenance_need(machine_id)
@@ -240,17 +239,17 @@ async def predict_maintenance(machine_id: str):
         return prediction
     
     except Exception as e:
-        logger.error(f"❌ Erreur prédiction maintenance : {e}")
+        logger.error(f"âŒ Erreur prÃ©diction maintenance : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/status/summary")
 async def get_machines_status_summary():
     """
-    Obtenir le résumé des statuts de toutes les machines
+    Obtenir le rÃ©sumÃ© des statuts de toutes les machines
     
     Returns:
-        Résumé des machines
+        RÃ©sumÃ© des machines
     """
     try:
         summary = await MachineLogic.get_machines_status_summary()
@@ -258,5 +257,5 @@ async def get_machines_status_summary():
         return summary
     
     except Exception as e:
-        logger.error(f"❌ Erreur résumé machines : {e}")
+        logger.error(f"âŒ Erreur rÃ©sumÃ© machines : {e}")
         raise HTTPException(status_code=500, detail=str(e))
