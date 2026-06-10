@@ -21,7 +21,7 @@ export interface Video {
   confidence?: number;
   total_detections?: number;
   summary?: { [key: string]: number };
-  unique_objects?: { [key: string]: number };
+  classes_detectees?: { [key: string]: number };
   uploaded_at?: string;
   processed_at?: string;
   created_at: string;

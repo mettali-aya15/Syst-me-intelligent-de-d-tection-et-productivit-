@@ -248,7 +248,6 @@ async def get_video(video_id: str):
             "status": video.status,
             "model_type": getattr(video, 'model_type', 'both'),
             "total_detections": video.total_detections,
-            "summary": video.summary,
             "unique_objects": video.unique_objects,
             "uploaded_at": video.uploaded_at,
             "processed_at": video.processed_at
@@ -390,14 +389,12 @@ async def list_videos(
     skip: int = Query(0, ge=0)
 ):
     """
-    Lister les vidéos avec TOUTES les données
     
     - **status**: Filtrer par statut (uploaded, processing, completed, failed)
     - **limit**: Nombre maximum de résultats
     - **skip**: Nombre de résultats à sauter
     
     Returns:
-        Liste complète des vidéos avec unique_objects et summary
     """
     try:
         videos = await VideoService.list_videos(status=status, limit=limit, skip=skip)
@@ -415,7 +412,6 @@ async def list_videos(
                 "model_type": getattr(video, 'model_type', 'both'),
                 "total_detections": video.total_detections,
                 "unique_objects": video.unique_objects,
-                "summary": video.summary,
                 "created_at": video.uploaded_at,
                 "uploaded_at": video.uploaded_at,
                 "processed_at": video.processed_at

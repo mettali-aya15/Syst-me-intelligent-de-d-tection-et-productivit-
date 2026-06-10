@@ -4,7 +4,6 @@
 Services d'analytics et KPI
 """
 
-from .kpi_service import KPIService
 from .productivity import ProductivityService
 
 __all__ = [

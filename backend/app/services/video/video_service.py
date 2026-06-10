@@ -442,7 +442,12 @@ class VideoService:
             
             await collection.update_one(
                 {"_id": ObjectId(video_id)},
-                {"$set": {"status": VideoStatus.PROCESSING}}
+                {
+                    "$set": {
+                        "status": VideoStatus.COMPLETED,
+                        "processed_at": datetime.now()
+                    }
+                }
             )
             
             annotated_dir = Path(settings.ANNOTATED_DIR)
@@ -474,43 +479,35 @@ class VideoService:
             
             logger.info(f"🔍 Comptage objets uniques...")
             unique_objects = VideoService.count_unique_objects_smart(frames_detections, line_counts)
-            
+
             detections_collection = Database.get_collection("video_detections")
-            
-            total_detections = 0
-            summary = {}
-            
-            for frame_detection in frames_detections:
-                for detection in frame_detection.detections:
-                    detection_doc = {
-                        "video_id": ObjectId(video_id),
-                        "frame_number": frame_detection.frame_number,
-                        "timestamp": frame_detection.timestamp,
-                        "class_name": detection.class_name,
-                        "confidence": detection.confidence,
-                        "bbox": detection.bbox.dict(),
-                        "source": detection.source,
-                        "processed_at": datetime.now()
-                    }
-                    
-                    await detections_collection.insert_one(detection_doc)
-                    
-                    total_detections += 1
-                    summary[detection.class_name] = summary.get(detection.class_name, 0) + 1
-            
+
+# ✅ Calculer total_detections AVANT la boucle
+            total_detections = len([det for frame in frames_detections for det in frame.detections])
+
+# ❌ SUPPRIMER LA BOUCLE COMPLÈTEMENT
+# (on ne crée pas detection_doc par frame)
+
+# ✅ Créer UN SEUL document FINAL APRÈS
+            final_detection_doc = {
+    "video_id": ObjectId(video_id),
+    "processed_at": datetime.now(),
+    "classes_detectees": unique_objects
+}
+
+            await detections_collection.insert_one(final_detection_doc)
+
             await collection.update_one(
-                {"_id": ObjectId(video_id)},
-                {
-                    "$set": {
-                        "status": VideoStatus.COMPLETED,
-                        "annotated_path": str(annotated_path),
-                        "total_detections": total_detections,
-                        "summary": summary,
-                        "unique_objects": unique_objects,
-                        "processed_at": datetime.now()
-                    }
-                }
-            )
+    {"_id": ObjectId(video_id)},
+    {
+        "$set": {
+            "status": VideoStatus.COMPLETED,
+            "annotated_path": str(annotated_path),
+            "total_detections": total_detections,
+            "processed_at": datetime.now()
+        }
+    }
+)
             
             logger.info(f"✅ Total: {total_detections} | Uniques: {unique_objects}")
             
@@ -521,7 +518,6 @@ class VideoService:
                 "video_id": video_id,
                 "status": "completed",
                 "total_detections": total_detections,
-                "summary": summary,
                 "unique_objects": unique_objects
             }
         
@@ -717,7 +713,65 @@ class VideoService:
                 'employees_absent': 0
             }
             
+            
             logger.info(f"🚨 Alertes calculées: {alerts}")
+            Database = VideoService._get_db()
+            notifications_collection = Database.get_collection("notifications")
+            
+            notifications_to_insert = []
+            
+            # 1️⃣ NOTIFICATION : Analyse terminée (TOUJOURS)
+            notifications_to_insert.append({
+                "type": "video_complete",
+                "severity": "low",
+                "title": "Analyse vidéo terminée",
+                "message": f"La vidéo '{video_doc.get('filename')}' a été analysée avec succès",
+
+
+                "created_at": datetime.now()
+            })
+            
+            # 2️⃣ NOTIFICATION : Machines arrêtées (SI DÉTECTÉES)
+            if alerts['machines_stopped'] > 0:
+                notifications_to_insert.append({
+                    "type": "alert",
+                    "severity": "high",
+                    "title": "Machine(s) arrêtée(s) détectée(s)",
+                    "message": f"{alerts['machines_stopped']} machine(s) arrêtée(s) détectée(s) dans la vidéo '{video_doc.get('filename')}'",
+
+
+                    "created_at": datetime.now()
+                })
+            
+            # 3️⃣ NOTIFICATION : Employés inactifs (SI DÉTECTÉS)
+            if alerts['employees_inactive'] > 0:
+                notifications_to_insert.append({
+                    "type": "alert",
+                    "severity": "medium",
+                    "title": "Employé(s) inactif(s) détecté(s)",
+                    "message": f"{alerts['employees_inactive']} employé(s) inactif(s) détecté(s) dans la vidéo '{video_doc.get('filename')}'",
+
+
+                    "created_at": datetime.now()
+                })
+            
+            # 4️⃣ NOTIFICATION : Tables vides (SI DÉTECTÉES)
+            if alerts['tables_empty'] > 0:
+                notifications_to_insert.append({
+                    "type": "alert",
+                    "severity": "low",
+                    "title": "Table(s) vide(s) détectée(s)",
+                    "message": f"{alerts['tables_empty']} table(s) vide(s) détectée(s) dans la vidéo '{video_doc.get('filename')}'",
+
+
+                    "created_at": datetime.now()
+                })
+            
+            # Insérer toutes les notifications en une seule fois
+            if notifications_to_insert:
+                result = await notifications_collection.insert_many(notifications_to_insert)
+                logger.info(f"✅ {len(result.inserted_ids)} notification(s) sauvegardée(s) dans MongoDB")
+
             
             message = {
                 'type': 'analysis_complete',
@@ -752,9 +806,36 @@ class VideoService:
                     'error': error
                 }
             }
+            Database = VideoService._get_db()
+            notifications_collection = Database.get_collection("notifications")
+            
+            notification_doc = {
+                "type": "video_failed",
+                "severity": "high",
+                "title": "Erreur d'analyse vidéo",
+                "message": f"L'analyse de '{filename}' a échoué : {error}",
+
+
+                "created_at": datetime.now()
+            }
+            
+            result = await notifications_collection.insert_one(notification_doc)
+            logger.info(f"✅ Notification d'erreur sauvegardée dans MongoDB : {result.inserted_id}")
             
             logger.error(f"📤 Envoi notification d'erreur WebSocket: {message}")
             await manager.broadcast(message)
         
         except Exception as e:
             logger.error(f"❌ Erreur envoi notification erreur WebSocket: {e}")
+
+
+
+
+
+
+
+
+
+
+
+

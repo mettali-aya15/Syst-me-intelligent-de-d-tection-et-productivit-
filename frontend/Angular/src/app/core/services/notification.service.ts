@@ -332,28 +332,30 @@ export class NotificationService {
   // ACTIONS SUR NOTIFICATIONS
   // ========================================
 
+  // ✅ MARQUER COMME LU EN LOCAL UNIQUEMENT (pas d'appel MongoDB)
   markAsRead(notificationId: string): void {
     const notifications = this.getAllNotifications();
     const notification = notifications.find(n => n.id === notificationId);
     
     if (notification) {
       notification.read = true;
-      notification.isNew = false; // ✅ Plus nouvelle quand lue
+      notification.isNew = false;
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(notifications));
       window.dispatchEvent(new CustomEvent('notifications-updated'));
-      console.log('✅ Notification marquée comme lue:', notificationId);
+      console.log('✅ Notification marquée comme lue (localStorage):', notificationId);
     }
   }
 
+  // ✅ MARQUER TOUS COMME LU EN LOCAL UNIQUEMENT (pas d'appel MongoDB)
   markAllAsRead(): void {
     const notifications = this.getAllNotifications();
     notifications.forEach(n => {
       n.read = true;
-      n.isNew = false; // ✅ Plus nouvelles
+      n.isNew = false;
     });
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(notifications));
     window.dispatchEvent(new CustomEvent('notifications-updated'));
-    console.log('✅ Toutes les notifications marquées comme lues');
+    console.log('✅ Toutes les notifications marquées comme lues (localStorage)');
   }
 
   // ✅ NOUVELLE MÉTHODE : Marquer toutes comme "pas nouvelles" (sans les marquer lues)

@@ -85,7 +85,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         access_token = create_access_token(
             data={
                 "sub": user["username"],
-                "user_id": str(user["_id"]),
                 "role": user.get("role", "viewer")
             }
         )
@@ -155,7 +154,6 @@ async def register(
         
         return {
             "message": "User created successfully",
-            "user_id": str(result.inserted_id),
             "username": username,
             "role": role
         }
@@ -180,7 +178,6 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     """
     return {
         "username": current_user.get("sub"),
-        "user_id": current_user.get("user_id"),
         "role": current_user.get("role", "viewer")
     }
 

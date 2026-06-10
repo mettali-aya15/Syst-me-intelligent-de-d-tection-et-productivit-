@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modèles de détection Pydantic
+Modeles de detection Pydantic
 """
 
 from pydantic import BaseModel, Field
@@ -9,7 +9,7 @@ from typing import Optional, List
 
 
 class BoundingBox(BaseModel):
-    """Bounding box normalisée (0-1)"""
+    """Bounding box normalisee (0-1)"""
     x: float = Field(..., ge=0, le=1)
     y: float = Field(..., ge=0, le=1)
     width: float = Field(..., ge=0, le=1)
@@ -33,16 +33,17 @@ class BoundingBox(BaseModel):
 
 
 class Detection(BaseModel):
-    """Détection d'un objet avec Track ID pour le suivi"""
+    """Detection d'un objet avec Track ID pour le suivi"""
     class_name: str
     confidence: float = Field(..., ge=0, le=1)
     bbox: BoundingBox
-    source: str = "unknown"  # 'employee_model' or 'object_model'
-    track_id: Optional[int] = None  # Crucial for ByteTrack
+    source: str = "unknown"
+    classes_detectees: Optional[dict] = None
+    track_id: Optional[int] = None
 
 
 class FrameDetection(BaseModel):
-    """Ensemble des détections pour une frame donnée"""
+    """Ensemble des detections pour une frame donnee"""
     frame_number: int
     timestamp: float
     detections: List[Detection]

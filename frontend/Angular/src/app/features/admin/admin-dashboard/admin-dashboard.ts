@@ -5,6 +5,8 @@ import { Router, RouterModule } from '@angular/router';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { Chart, registerables } from 'chart.js';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
+import { VideoService } from '../../../features/videos/services/video.service';
+
 
 Chart.register(...registerables);
 
@@ -42,6 +44,7 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   router = inject(Router);
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8000/api/v1';
+  private videoService = inject(VideoService);
   
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   
@@ -169,98 +172,104 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
   // ==========================================
   // 📥 CHARGEMENT DES DONNÉES
   // ==========================================
-  async loadData(): Promise<void> {
-    try {
-      this.loading = true;
-      
-      const videos = await this.http.get<any[]>(`${this.apiUrl}/videos/`).toPromise();
-      const completed = videos?.filter(v => v.status === 'completed') || [];
-      
-      console.log('🎥 Admin Dashboard - Vidéos terminées:', completed.length);
-      
-      if (completed.length === 0) {
-        this.loading = false;
-        return;
-      }
-      
-      // 1. VIDÉO ACTUELLE
-      this.currentVideo = completed[0];
-      const uniqueObjects = this.currentVideo.unique_objects || {};
-      
-      console.log('📊 Détections brutes:', uniqueObjects);
-      
-      // 2. MÉTADONNÉES
-      this.videoMetadata = {
-        uploadedAt: this.formatDateTime(new Date(this.currentVideo.uploaded_at || this.currentVideo.created_at)),
-        analyzedAt: this.formatDateTime(new Date(this.currentVideo.created_at)),
-        duration: '2min 34s',
-        frameCount: this.currentVideo.total_detections || 0,
-        analysisTime: '45s'
-      };
-      
-      // 3. EXTRACTION DES CLASSES - ✅ FILTRER LES NOMS INDIVIDUELS
-      this.detections = [];
-      this.totalDetections = 0;
-      
-      // ✅ Liste des noms à exclure (individus et éléments contextuels)
-      const EXCLUDED_NAMES = [
-        'seline', 'adem', 'mohamed', 'ali', 'alena', 'amir', 'insaf', 
-        'ibtihel', 'amelie', 'sami', 'employe', 'porte verte', 'temps',
-        'porte_verte', 'temp'
-      ];
-      
-      Object.keys(uniqueObjects).forEach(key => {
-        const value = Number(uniqueObjects[key]) || 0;
-        const keyLower = key.toLowerCase();
-        
-        // ✅ FILTRER : Ne garder QUE les vraies classes (pas les noms individuels)
-        const isExcluded = EXCLUDED_NAMES.some(name => keyLower.includes(name));
-        
-        if (value > 0 && !isExcluded) {
-          this.detections.push({
-            key: key,
-            label: this.formatLabel(key),
-            value: value,
-            icon: this.getIcon(key),
-            color: this.getColor(key),
-            percentage: '0'
-          });
-          this.totalDetections += value;
-        }
-      });
-      
-      // ✅ Calculer les pourcentages
-      this.detections.forEach(d => {
-        d.percentage = this.totalDetections > 0 
-          ? ((d.value / this.totalDetections) * 100).toFixed(1) 
-          : '0';
-      });
-      
-      console.log('📊 Classes extraites (filtrées):', this.detections.map(d => `${d.label}: ${d.value}`));
-      
-      // 4. TIMELINE
-      this.generateAnalysisTimeline(completed);
-      
-      // 5. ANALYSES RÉCENTES
-      this.recentAnalyses = completed.slice(0, 5).map(v => ({
-        id: v._id,
-        filename: v.filename,
-        date: this.formatDateTime(new Date(v.created_at)),
-        detectionCount: Object.values(v.unique_objects || {}).reduce((sum: number, val: any) => sum + Number(val), 0),
-        status: v.status
-      }));
-      
-      // 6. GRAPHIQUES
-      setTimeout(() => this.initCharts(), 200);
-      
+async loadData(): Promise<void> {
+  try {
+    this.loading = true;
+    
+    const videos = await this.http.get<any[]>(`${this.apiUrl}/videos/`).toPromise();
+    const completed = videos?.filter(v => v.status === 'completed') || [];
+    
+    console.log('🎥 Admin Dashboard - Vidéos terminées:', completed.length);
+    
+    if (completed.length === 0) {
       this.loading = false;
-      
-    } catch (error) {
-      console.error('❌ Erreur chargement:', error);
-      this.loading = false;
+      return;
     }
-  }
 
+    // ✅ CHARGER classes_detectees pour toutes les vidéos depuis video_detections
+    for (const v of completed) {
+      try {
+        const det = await this.http.get<any>(
+          `http://localhost:8000/api/v1/detections/video/${v._id}`
+        ).toPromise();
+        v.classes_detectees = det?.classes_detectees || {};
+      } catch {
+        v.classes_detectees = {};
+      }
+    }
+
+    this.currentVideo = completed[0];
+    const uniqueObjects = completed[0].classes_detectees || {};
+    console.log('📊 Détections brutes:', uniqueObjects);
+
+    // 2. MÉTADONNÉES
+    this.videoMetadata = {
+      uploadedAt: this.formatDateTime(new Date(this.currentVideo.uploaded_at || this.currentVideo.created_at)),
+      analyzedAt: this.formatDateTime(new Date(this.currentVideo.created_at)),
+      duration: '2min 34s',
+      frameCount: this.currentVideo.total_detections || 0,
+      analysisTime: '45s'
+    };
+
+    // 3. EXTRACTION DES CLASSES
+    this.detections = [];
+    this.totalDetections = 0;
+
+    const EXCLUDED_NAMES = [
+      'seline', 'adem', 'mohamed', 'ali', 'alena', 'amir', 'insaf',
+      'ibtihel', 'amelie', 'sami', 'employe', 'porte verte', 'temps',
+      'porte_verte', 'temp'
+    ];
+
+    Object.keys(uniqueObjects).forEach(key => {
+      const value = Number(uniqueObjects[key]) || 0;
+      const keyLower = key.toLowerCase();
+      const isExcluded = EXCLUDED_NAMES.some(name => keyLower.includes(name));
+
+      if (value > 0 && !isExcluded) {
+        this.detections.push({
+          key: key,
+          label: this.formatLabel(key),
+          value: value,
+          icon: this.getIcon(key),
+          color: this.getColor(key),
+          percentage: '0'
+        });
+        this.totalDetections += value;
+      }
+    });
+
+    this.detections.forEach(d => {
+      d.percentage = this.totalDetections > 0
+        ? ((d.value / this.totalDetections) * 100).toFixed(1)
+        : '0';
+    });
+
+    console.log('📊 Classes extraites (filtrées):', this.detections.map(d => `${d.label}: ${d.value}`));
+
+    // 4. TIMELINE
+    this.generateAnalysisTimeline(completed);
+
+    // 5. ANALYSES RÉCENTES
+    this.recentAnalyses = completed.slice(0, 5).map(v => ({
+      id: v._id,
+      filename: v.filename,
+      date: this.formatDateTime(new Date(v.created_at)),
+      detectionCount: Object.values(v.classes_detectees || {})
+        .reduce((sum: number, val: any) => sum + Number(val), 0),
+      status: v.status
+    }));
+
+    // 6. GRAPHIQUES
+    setTimeout(() => this.initCharts(), 200);
+
+    this.loading = false;
+
+  } catch (error) {
+    console.error('❌ Erreur loadData:', error);
+    this.loading = false;
+  }
+}
   private generateAnalysisTimeline(videos: any[]): void {
     const last7Days: AnalysisTimeline[] = [];
     
@@ -275,7 +284,8 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit, OnDestroy
       });
       
       const totalDet = dayVideos.reduce((sum, v) => {
-        return sum + Object.values(v.unique_objects || {}).reduce((a: number, b: any) => a + Number(b), 0);
+        return sum + Object.values(v.classes_detectees || {}).reduce((a: number, b: any) => a + Number(b), 0);
+
       }, 0);
       
       last7Days.push({

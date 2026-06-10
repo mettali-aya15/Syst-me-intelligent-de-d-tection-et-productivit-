@@ -8,7 +8,7 @@ Vue d'ensemble consolidée
 from fastapi import APIRouter, HTTPException
 from datetime import datetime, date
 
-from app.services.analytics import KPIService, ProductivityService
+from app.services.analytics import ProductivityService
 from core.database import Database
 
 import logging

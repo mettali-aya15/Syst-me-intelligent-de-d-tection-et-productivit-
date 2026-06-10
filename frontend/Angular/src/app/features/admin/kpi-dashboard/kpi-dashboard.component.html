@@ -18,7 +18,6 @@
         </p>
       </div>
       <div class="header-actions">
-        <!-- ✅ BOUTONS EXPORT -->
         <div class="export-buttons">
           <button class="btn-export pdf" (click)="exportToPDF()" [disabled]="loading || !currentVideoKpi">
             <i></i>
@@ -32,12 +31,12 @@
 
         <div class="period-selector">
           <label><i class="far fa-clock"></i> Période :</label>
-          <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" [disabled]="loading">
-            <option value="video">Durée de la vidéo (Réel)</option>
+          <select [(ngModel)]="selectedPeriod" (ngModelChange)="onPeriodChange()">
+            <option value="video">Durée vidéo</option>
             <option value="hour">Dernière heure</option>
             <option value="day">Aujourd'hui</option>
-            <option value="week">Cette semaine</option>
-            <option value="month">Ce mois</option>
+            <option value="week">7 derniers jours</option>
+            <option value="month">30 derniers jours</option>
           </select>
         </div>
         <button class="btn-refresh" (click)="refresh()" [disabled]="loading">
@@ -51,11 +50,13 @@
   <!-- ==========================================
        📈 RÉSUMÉ DES PROJECTIONS TEMPORELLES
        ========================================== -->
-  <div class="projection-banner glass-card" *ngIf="currentVideoKpi">
+  <div class="projection-banner glass-card" *ngIf="currentVideoKpi && showContent" [attr.data-key]="renderKey">
+
     <div class="projection-header">
       <i class="fas fa-chart-area"></i>
       <h4>Projections basées sur l'analyse</h4>
-      <span class="projection-period">{{ getPeriodLabel() }}</span>
+      <!-- ✅ FIX: utiliser projectionSummary.period -->
+      <span class="projection-period">{{ projectionSummary.period }}</span>
     </div>
     
     <div class="projection-grid">
@@ -98,7 +99,8 @@
           <div class="projection-label">Facteur de projection</div>
           <div class="projection-value">×{{ projectionSummary.factor }}</div>
           <div class="projection-base">
-            Durée vidéo: {{ videoDuration }}s → {{ getPeriodLabel() }}
+            <!-- ✅ FIX: utiliser projectionSummary.period -->
+            Durée vidéo: {{ videoDuration }}s → {{ projectionSummary.period }}
           </div>
         </div>
       </div>
@@ -108,7 +110,8 @@
       <small>
         💡 <strong>Exemple :</strong> Si la vidéo de {{ videoDuration }}s détecte 
         <strong>{{ currentVideoKpi.raw.products }} produits</strong>, 
-        alors pour <strong>{{ getPeriodLabel() }}</strong> on estime : 
+        <!-- ✅ FIX: utiliser projectionSummary.period -->
+        alors pour <strong>{{ projectionSummary.period }}</strong> on estime : 
         <strong>{{ projectionSummary.estimatedProducts | number }} produits</strong> 
         ({{ currentVideoKpi.raw.products }} × {{ projectionSummary.factor }})
       </small>
@@ -139,7 +142,8 @@
   <!-- ==========================================
        CONTENU KPI
        ========================================== -->
-  <div *ngIf="!loading && currentVideoKpi" class="kpi-content">
+  <div *ngIf="!loading && currentVideoKpi && showContent" class="kpi-content">
+
 
     <!-- 🎯 JAUGES PRINCIPALES -->
     <div class="gauges-section">
@@ -327,7 +331,6 @@
     <!-- 📈 GRAPHIQUES ANALYTIQUES -->
     <div class="charts-section">
       
-      <!-- Radar Performance -->
       <div class="chart-container glass-card">
         <div class="chart-header">
           <h3><i class="fas fa-chart-radar"></i> Performance Globale</h3>
@@ -338,7 +341,6 @@
         </div>
       </div>
 
-      <!-- Tendances TRS -->
       <div class="chart-container glass-card">
         <div class="chart-header">
           <h3><i class="fas fa-chart-line"></i> Évolution TRS</h3>
@@ -349,7 +351,6 @@
         </div>
       </div>
 
-      <!-- Qualité -->
       <div class="chart-container glass-card">
         <div class="chart-header">
           <h3><i class="fas fa-award"></i> Indicateurs Qualité</h3>

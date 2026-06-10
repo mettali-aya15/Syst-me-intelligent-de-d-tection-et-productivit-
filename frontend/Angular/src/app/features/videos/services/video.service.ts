@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, switchMap, map } from 'rxjs';
+
 import { NotificationService } from '../../../core/services/notification.service';
 import { Video, VideoUploadParams, VideoUploadResponse } from '../models/video.model';
 
@@ -66,8 +67,17 @@ export class VideoService {
   }
 
   getVideo(id: string): Observable<Video> {
-    return this.http.get<Video>(`${this.apiUrl}/${id}`);
-  }
+    return this.http.get<Video>(`${this.apiUrl}/${id}`).pipe(
+      switchMap((video: Video) => {
+        return this.getVideoDetections(id).pipe(
+          map((detectionData) => ({
+            ...video,
+            classes_detectees: detectionData?.classes_detectees || {}
+          }))
+        );
+      })
+    );
+}
 
   analyzeVideo(videoId: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/${videoId}/analyze`, {});
@@ -91,79 +101,87 @@ export class VideoService {
       return;
     }
 
-    const uniqueObjects = video.unique_objects || {};
-    
-    console.log('🔍 Vérification des alertes pour:', video.filename);
-    console.log('🎯 model_type:', video.model_type);
-    console.log('📦 unique_objects:', uniqueObjects);
+    // ✅ RÉCUPÈRE classes_detectees DEPUIS video_detections
+    this.getVideoDetections(video._id).subscribe({
+      next: (detectionData) => {
+        const uniqueObjects = detectionData?.classes_detectees || {};
+        
+        console.log('🔍 Vérification des alertes pour:', video.filename);
+        console.log('🎯 model_type:', video.model_type);
+        console.log('📦 classes_detectees:', uniqueObjects);
 
-    let hasCreatedNotification = false;
+        let hasCreatedNotification = false;
 
-    const isEmployeeModel = video.model_type === 'employees' || video.model_type === 'both';
+        const isEmployeeModel = video.model_type === 'employees' || video.model_type === 'both';
 
-    // MACHINES ARRÊTÉES
-    const machinesStopped = 
-      uniqueObjects['machine arrêtée'] || 
-      uniqueObjects['machine arretee'] || 
-      uniqueObjects['Machine Arrêtée'] || 
-      uniqueObjects['Machine Arretee'] || 
-      uniqueObjects['MACHINE_ARRETEE'] ||
-      uniqueObjects['machine_arretee'] || 0;
-    
-    if (machinesStopped > 0) {
-      console.log('🚨 → NOTIFICATION: Machine arrêtée');
-      this.notificationService.notifyMachineStopped(video._id, machinesStopped);
-      hasCreatedNotification = true;
-    }
+        // MACHINES ARRÊTÉES
+        const machinesStopped = 
+          uniqueObjects['machine arrêtée'] || 
+          uniqueObjects['machine arretee'] || 
+          uniqueObjects['Machine Arrêtée'] || 
+          uniqueObjects['Machine Arretee'] || 
+          uniqueObjects['MACHINE_ARRETEE'] ||
+          uniqueObjects['machine_arretee'] || 0;
+        
+        if (machinesStopped > 0) {
+          console.log('🚨 → NOTIFICATION: Machine arrêtée');
+          this.notificationService.notifyMachineStopped(video._id, machinesStopped);
+          hasCreatedNotification = true;
+        }
 
-    // EMPLOYÉS INACTIFS
-    const employeesInactive = 
-      uniqueObjects['employé inactif'] || 
-      uniqueObjects['employe inactif'] || 
-      uniqueObjects['Employé Inactif'] || 
-      uniqueObjects['Employe Inactif'] ||
-      uniqueObjects['EMPLOYE_INACTIF'] ||
-      uniqueObjects['employe_inactif'] || 0;
-    
-    if (employeesInactive > 0) {
-      console.log('⚠️ → NOTIFICATION: Employé inactif');
-      this.notificationService.notifyEmployeeInactive(video._id, employeesInactive);
-      hasCreatedNotification = true;
-    }
+        // EMPLOYÉS INACTIFS
+        const employeesInactive = 
+          uniqueObjects['employé inactif'] || 
+          uniqueObjects['employe inactif'] || 
+          uniqueObjects['Employé Inactif'] || 
+          uniqueObjects['Employe Inactif'] ||
+          uniqueObjects['EMPLOYE_INACTIF'] ||
+          uniqueObjects['employe_inactif'] || 0;
+        
+        if (employeesInactive > 0) {
+          console.log('⚠️ → NOTIFICATION: Employé inactif');
+          this.notificationService.notifyEmployeeInactive(video._id, employeesInactive);
+          hasCreatedNotification = true;
+        }
 
-    // TABLES VIDES
-    const emptyTables = 
-      uniqueObjects['tables_vides'] ||
-      uniqueObjects['tables vides'] || 
-      uniqueObjects['table_vide'] || 
-      uniqueObjects['table vide'] || 
-      uniqueObjects['Table vide'] || 
-      uniqueObjects['TABLE_VIDE'] || 0;
+        // TABLES VIDES
+        const emptyTables = 
+          uniqueObjects['tables_vides'] ||
+          uniqueObjects['tables vides'] || 
+          uniqueObjects['table_vide'] || 
+          uniqueObjects['table vide'] || 
+          uniqueObjects['Table vide'] || 
+          uniqueObjects['TABLE_VIDE'] || 0;
 
-    if (emptyTables > 0) {
-      console.log('📋 → NOTIFICATION: Table vide détectée');
-      this.notificationService.notifyEmptyTable(video._id, emptyTables);
-      hasCreatedNotification = true;
-    }
+        if (emptyTables > 0) {
+          console.log('📋 → NOTIFICATION: Table vide détectée');
+          this.notificationService.notifyEmptyTable(video._id, emptyTables);
+          hasCreatedNotification = true;
+        }
 
-    // ABSENCES (SEULEMENT POUR EMPLOYEES/BOTH)
-    if (isEmployeeModel) {
-      console.log('👥 Vérification des absences (model_type = ' + video.model_type + ')');
-      this.checkEmployeeAbsence(video);
-      hasCreatedNotification = true;
-    } else {
-      console.log('⏭️ Pas de vérification d\'absence (model_type = ' + video.model_type + ')');
-    }
+        // ABSENCES (SEULEMENT POUR EMPLOYEES/BOTH)
+        if (isEmployeeModel) {
+          console.log('👥 Vérification des absences (model_type = ' + video.model_type + ')');
+          this.checkEmployeeAbsence(video);
+          hasCreatedNotification = true;
+        } else {
+          console.log('⏭️ Pas de vérification d\'absence (model_type = ' + video.model_type + ')');
+        }
 
-    // ANALYSE TERMINÉE (UNE SEULE FOIS)
-    if (hasCreatedNotification) {
-      console.log('✅ → NOTIFICATION: Analyse terminée');
-      this.notificationService.notifyVideoAnalyzed(video._id, video.filename);
-    }
+        // ANALYSE TERMINÉE (UNE SEULE FOIS)
+        if (hasCreatedNotification) {
+          console.log('✅ → NOTIFICATION: Analyse terminée');
+          this.notificationService.notifyVideoAnalyzed(video._id, video.filename);
+        }
 
-    // ✅ MARQUER COMME NOTIFIÉ
-    sessionStorage.setItem(notifiedKey, 'true');
-    console.log(`✅ Vidéo ${video._id} marquée comme notifiée`);
+        // ✅ MARQUER COMME NOTIFIÉ
+        sessionStorage.setItem(notifiedKey, 'true');
+        console.log(`✅ Vidéo ${video._id} marquée comme notifiée`);
+      },
+      error: (err) => {
+        console.error('❌ Erreur récupération détections:', err);
+      }
+    });
   }
 
   private checkEmployeeAbsence(video: Video): void {
@@ -190,5 +208,8 @@ export class VideoService {
         console.error('❌ Erreur lors de la vérification des absences:', err);
       }
     });
+  }
+  getVideoDetections(videoId: string): Observable<any> {
+    return this.http.get<any>(`http://localhost:8000/api/v1/detections/video/${videoId}`);
   }
 }

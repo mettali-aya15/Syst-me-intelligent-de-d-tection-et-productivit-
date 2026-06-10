@@ -159,25 +159,31 @@ export class VideoListComponent implements OnInit {
   }
 
   hasDetections(video: Video): boolean {
-    if (!video.unique_objects) return false;
+    if (!video.classes_detectees) return false;
+
     
-    const total = Object.values(video.unique_objects)
+    const total = Object.values(video.classes_detectees)
+
       .reduce((sum, count) => sum + (Number(count) || 0), 0);
     
     return total > 0;
   }
 
   getTotalUniqueObjects(video: Video): number {
-    if (!video.unique_objects) return 0;
+    if (!video.classes_detectees) return 0;
+
     
-    return Object.values(video.unique_objects)
+    return Object.values(video.classes_detectees)
+
       .reduce((sum, count) => sum + (Number(count) || 0), 0);
   }
 
   getTopClasses(video: Video): string[] {
-    if (!video.unique_objects) return [];
+    if (!video.classes_detectees) return [];
+
     
-    return Object.entries(video.unique_objects)
+    return Object.entries(video.classes_detectees)
+
       .filter(([_, count]) => Number(count) > 0)
       .sort((a, b) => Number(b[1]) - Number(a[1]))
       .slice(0, 3)

@@ -1,373 +1,314 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Routes API pour les KPI avec périodes dynamiques: heure, jour, semaine, mois
-"""
-
-from fastapi import APIRouter, HTTPException, Query
-from typing import Optional, List, Literal
-from datetime import datetime, timedelta
-
-from app.services.analytics.kpi_service import KPIService
-from app.models.kpi import KPIGlobal
-
+from fastapi import APIRouter, HTTPException
+from typing import List, Optional
+from app.models.kpi import KPISnapshot
+from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import datetime
 import logging
-logger = logging.getLogger(__name__)
+import os
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# ==========================================
+# 🔌 CONNEXION MONGODB
+# ==========================================
+
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "camia_factory")
+
+client = AsyncIOMotorClient(MONGODB_URL)
+database = client[DATABASE_NAME]
+kpis_collection = database["kpis"]
 
 
-@router.get("/global/today", response_model=dict)
-async def get_kpi_today(
-    periode: Literal["heure", "jour", "semaine", "mois"] = Query(
-        "jour", 
-        description="Type de période: heure (dernière heure), jour (aujourd'hui), semaine (cette semaine), mois (ce mois)"
-    )
-):
+# ==========================================
+# 💾 SAUVEGARDE KPI - ✅ CORRIGÉE
+# ==========================================
+
+@router.post("/save", status_code=201)
+async def save_kpi(kpi_data: KPISnapshot):
     """
-    Obtenir les KPI globaux selon la période choisie
-    
-    Args:
-        periode: Type de période (heure/jour/semaine/mois)
-    
-    Returns: KPI complets - sections optionnelles selon détections
+    Sauvegarde ou met à jour un snapshot KPI
+    ✅ FIX: Maintenant utilise video_analysis_id ET periode comme clé unique
+    - Si (video_analysis_id + periode) existe : update
+    - Sinon : création nouveau document
     """
     try:
-        logger.info(f"📊 Requête KPI période: {periode}")
+        # Convertir en dict et ne garder que les champs fournis
+        kpi_dict = kpi_data.dict(exclude_unset=True, exclude_none=True)
         
-        # Calculer les KPI selon la période
-        kpi = await KPIService.calculate_kpi_global(periode=periode)
+        # Ajouter timestamp de création si nouveau
+        if "created_at" not in kpi_dict:
+            kpi_dict["created_at"] = datetime.now()
         
-        # Convertir en dict avec exclusion des None
-        kpi_dict = kpi.model_dump(by_alias=True, exclude_none=True, exclude={"id", "created_at"})
+        # Convertir les datetimes en ISO string pour MongoDB
+        for date_field in ["date", "date_debut", "date_fin", "created_at"]:
+            if date_field in kpi_dict and kpi_dict[date_field]:
+                if isinstance(kpi_dict[date_field], datetime):
+                    kpi_dict[date_field] = kpi_dict[date_field].isoformat()
         
-        response = {
-            "success": True,
-            "data": kpi_dict
-        }
-        
-        logger.info(f"✅ KPI {periode} récupérés avec succès")
-        return response
-        
+        # ✅ FIX: Chercher par video_analysis_id ET periode
+        if kpi_data.video_analysis_id and kpi_data.periode:
+            
+            # Créer la clé composite unique
+            query_filter = {
+                "video_analysis_id": kpi_data.video_analysis_id,
+                "periode": kpi_data.periode  # ✅ AJOUT CRITIQUE
+            }
+            
+            result = await kpis_collection.update_one(
+                query_filter,
+                {"$set": kpi_dict},
+                upsert=True
+            )
+            
+            if result.upserted_id:
+                logger.info(f"✅ KPI créé : {result.upserted_id} (vidéo: {kpi_data.video_analysis_id}, période: {kpi_data.periode})")
+                return {
+                    "message": "KPI créé avec succès",
+                    "id": str(result.upserted_id),
+                    "video_analysis_id": kpi_data.video_analysis_id,
+                    "periode": kpi_data.periode
+                }
+            else:
+                logger.info(f"✅ KPI mis à jour pour vidéo {kpi_data.video_analysis_id} (période: {kpi_data.periode})")
+                return {
+                    "message": "KPI mis à jour avec succès",
+                    "video_analysis_id": kpi_data.video_analysis_id,
+                    "periode": kpi_data.periode
+                }
+        else:
+            # Créer nouveau document sans video_analysis_id
+            result = await kpis_collection.insert_one(kpi_dict)
+            logger.info(f"✅ KPI créé : {result.inserted_id}")
+            return {
+                "message": "KPI créé avec succès",
+                "id": str(result.inserted_id)
+            }
+            
     except Exception as e:
-        logger.error(f"❌ Erreur KPI {periode} : {str(e)}")
+        logger.error(f"❌ Erreur sauvegarde KPI: {str(e)}")
+        logger.error(f"📦 Données reçues: {kpi_data.dict()}")
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
+
+
+# ==========================================
+# 📖 RÉCUPÉRATION KPI
+# ==========================================
+
+@router.get("/history/{video_analysis_id}")
+async def get_kpi_history(video_analysis_id: str):
+    """Récupère l'historique KPI d'une vidéo spécifique (toutes les périodes)"""
+    try:
+        kpis = await kpis_collection.find(
+            {"video_analysis_id": video_analysis_id}
+        ).sort("created_at", -1).to_list(length=100)
+        
+        # Convertir ObjectId en string
+        for kpi in kpis:
+            kpi["_id"] = str(kpi["_id"])
+        
+        return {"data": kpis, "count": len(kpis)}
+    except Exception as e:
+        logger.error(f"❌ Erreur récupération historique: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/global/week", response_model=dict)
-async def get_kpi_week():
+@router.get("/latest")
+async def get_latest_kpi(periode: Optional[str] = None):
     """
-    Obtenir les KPI globaux de la semaine (alias pour période=semaine)
-    
-    Returns: KPI de la semaine actuelle
-    """
-    try:
-        logger.info("📊 Requête KPI semaine")
-        
-        kpi = await KPIService.calculate_kpi_global(periode="semaine")
-        
-        kpi_dict = kpi.model_dump(by_alias=True, exclude_none=True, exclude={"id", "created_at"})
-        
-        response = {
-            "success": True,
-            "data": kpi_dict
-        }
-        
-        logger.info("✅ KPI semaine récupérés avec succès")
-        return response
-        
-    except Exception as e:
-        logger.error(f"❌ Erreur KPI semaine : {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/global/month", response_model=dict)
-async def get_kpi_month():
-    """
-    Obtenir les KPI globaux du mois (alias pour période=mois)
-    
-    Returns: KPI du mois actuel
+    Récupère le dernier KPI sauvegardé 
+    ✅ FIX: Utilise aggregation pipeline au lieu de find_one + sort
+    - Si periode fournie : filtre par période
+    - Sinon : retourne le dernier peu importe la période
     """
     try:
-        logger.info("📊 Requête KPI mois")
+        query = {}
+        if periode:
+            query["periode"] = periode
+            logger.info(f"🔍 Recherche KPI avec période: {periode}")
         
-        kpi = await KPIService.calculate_kpi_global(periode="mois")
-        
-        kpi_dict = kpi.model_dump(by_alias=True, exclude_none=True, exclude={"id", "created_at"})
-        
-        response = {
-            "success": True,
-            "data": kpi_dict
-        }
-        
-        logger.info("✅ KPI mois récupérés avec succès")
-        return response
-        
-    except Exception as e:
-        logger.error(f"❌ Erreur KPI mois : {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/global/custom", response_model=dict)
-async def get_kpi_custom(
-    date_debut: datetime = Query(..., description="Date de début"),
-    date_fin: datetime = Query(..., description="Date de fin"),
-    periode: Literal["heure", "jour", "semaine", "mois"] = Query(
-        "jour",
-        description="Type de période pour les calculs"
-    )
-):
-    """
-    Obtenir les KPI globaux pour une période personnalisée
-    
-    Args:
-        date_debut: Date de début
-        date_fin: Date de fin
-        periode: Type de période (heure/jour/semaine/mois)
-    
-    Returns: KPI de la période personnalisée
-    """
-    try:
-        logger.info(f"📊 Requête KPI personnalisée ({periode}) : {date_debut} - {date_fin}")
-        
-        kpi = await KPIService.calculate_kpi_global(
-            periode=periode,
-            date_debut=date_debut,
-            date_fin=date_fin
-        )
-        
-        kpi_dict = kpi.model_dump(by_alias=True, exclude_none=True, exclude={"id", "created_at"})
-        
-        response = {
-            "success": True,
-            "data": kpi_dict
-        }
-        
-        logger.info("✅ KPI personnalisés récupérés avec succès")
-        return response
-        
-    except Exception as e:
-        logger.error(f"❌ Erreur KPI personnalisés : {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/history", response_model=dict)
-async def get_kpi_history(
-    days: int = Query(30, ge=1, le=365, description="Nombre de jours d'historique"),
-    periode: Literal["heure", "jour", "semaine", "mois"] = Query(
-        "jour",
-        description="Type de période des KPI"
-    )
-):
-    """
-    Obtenir l'historique des KPI
-    
-    Args:
-        days: Nombre de jours d'historique (1-365)
-        periode: Type de période (heure/jour/semaine/mois)
-    
-    Returns: Liste des KPI historiques
-    """
-    try:
-        logger.info(f"📊 Requête historique KPI ({periode}) : {days} jours")
-        
-        kpi_list = await KPIService.get_kpi_history(days=days, periode=periode)
-        
-        # Convertir chaque KPI en dict
-        kpi_dicts = [
-            kpi.model_dump(by_alias=True, exclude_none=True, exclude={"id", "created_at"})
-            for kpi in kpi_list
+        # ✅ Utiliser aggregation pipeline pour plus de fiabilité
+        pipeline = [
+            {"$match": query},
+            {"$sort": {"created_at": -1}},
+            {"$limit": 1}
         ]
         
-        response = {
-            "success": True,
-            "count": len(kpi_dicts),
-            "data": kpi_dicts
-        }
+        results = await kpis_collection.aggregate(pipeline).to_list(length=1)
         
-        logger.info(f"✅ Historique KPI récupéré : {len(kpi_dicts)} entrées")
-        return response
+        if not results:
+            logger.warning(f"⚠️ Aucun KPI trouvé pour la requête: {query}")
+            raise HTTPException(status_code=404, detail=f"Aucun KPI trouvé {f'pour période {periode}' if periode else ''}")
         
+        kpi = results[0]
+        kpi["_id"] = str(kpi["_id"])
+        logger.info(f"✅ KPI trouvé : {kpi.get('_id')} (période: {kpi.get('periode')})")
+        return {"data": kpi}
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"❌ Erreur historique KPI : {str(e)}")
+        logger.error(f"❌ Erreur récupération dernier KPI: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/latest", response_model=dict)
-async def get_latest_kpi(
-    periode: Literal["heure", "jour", "semaine", "mois"] = Query(
-        "jour",
-        description="Type de période"
-    )
-):
+@router.delete("/{kpi_id}")
+async def delete_kpi(kpi_id: str):
+    """Supprime un KPI spécifique"""
+    try:
+        from bson import ObjectId
+        
+        result = await kpis_collection.delete_one({"_id": ObjectId(kpi_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="KPI non trouvé")
+        
+        logger.info(f"🗑️ KPI supprimé : {kpi_id}")
+        return {"message": "KPI supprimé avec succès"}
+    except Exception as e:
+        logger.error(f"❌ Erreur suppression KPI: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================================
+# 🔄 ROUTES DE COMPATIBILITÉ (anciennes)
+# ==========================================
+
+@router.get("/global/today")
+async def get_kpi_global_today(periode: str = "jour"):
     """
-    Obtenir le KPI le plus récent
+    Route de compatibilité pour l'ancien système
+    Redirige vers /latest avec la période appropriée
     
-    Args:
-        periode: Type de période (heure/jour/semaine/mois)
-    
-    Returns: KPI le plus récent ou null
+    Anciennes périodes (français) → Nouvelles périodes (anglais):
+    - heure → hour
+    - jour → day
+    - semaine → week
+    - mois → month
     """
     try:
-        logger.info(f"📊 Requête dernier KPI : {periode}")
+        # Mapper les anciennes périodes vers les nouvelles
+        periode_map = {
+            "heure": "hour",
+            "jour": "day",
+            "semaine": "week",
+            "mois": "month"
+        }
         
-        kpi = await KPIService.get_latest_kpi(periode=periode)
+        new_periode = periode_map.get(periode, "day")
         
-        if not kpi:
+        logger.info(f"📍 Route compatibilité: {periode} → {new_periode}")
+        
+        # Appeler la nouvelle route
+        return await get_latest_kpi(periode=new_periode)
+        
+    except HTTPException as e:
+        # Si aucun KPI trouvé, retourner une structure vide compatible
+        if e.status_code == 404:
+            logger.warning(f"⚠️ Aucun KPI trouvé pour période {periode}")
             return {
-                "success": True,
                 "data": None,
-                "message": "Aucun KPI trouvé"
+                "message": f"Aucun KPI disponible pour la période {periode}",
+                "status": "not_found"
             }
-        
-        kpi_dict = kpi.model_dump(by_alias=True, exclude_none=True, exclude={"id", "created_at"})
-        
-        response = {
-            "success": True,
-            "data": kpi_dict
-        }
-        
-        logger.info("✅ Dernier KPI récupéré avec succès")
-        return response
-        
+        raise
     except Exception as e:
-        logger.error(f"❌ Erreur dernier KPI : {str(e)}")
+        logger.error(f"❌ Erreur route de compatibilité: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/videos/{video_id}/calculate", response_model=dict)
-async def calculate_video_kpi(
-    video_id: str,
-    periode: Literal["heure", "jour", "semaine", "mois"] = Query(
-        "heure",
-        description="Type de période à calculer à partir de cette vidéo"
-    )
-):
-    """
-    Calculer les KPI pour une vidéo spécifique
-    
-    Args:
-        video_id: ID de la vidéo
-        periode: Type de période (heure/jour/semaine/mois)
-    
-    Returns: KPI calculés pour cette vidéo selon la période
-    """
+@router.get("/week")
+async def get_kpi_week():
+    """Route de compatibilité pour /week"""
+    logger.info("📍 Route compatibilité: /week")
     try:
-        logger.info(f"📊 Calcul KPI ({periode}) pour vidéo : {video_id}")
+        return await get_latest_kpi(periode="week")
+    except HTTPException as e:
+        if e.status_code == 404:
+            return {
+                "data": None,
+                "message": "Aucun KPI disponible pour la semaine",
+                "status": "not_found"
+            }
+        raise
+
+
+@router.get("/month")
+async def get_kpi_month():
+    """Route de compatibilité pour /month"""
+    logger.info("📍 Route compatibilité: /month")
+    try:
+        return await get_latest_kpi(periode="month")
+    except HTTPException as e:
+        if e.status_code == 404:
+            return {
+                "data": None,
+                "message": "Aucun KPI disponible pour le mois",
+                "status": "not_found"
+            }
+        raise
+
+
+# ==========================================
+# 📊 ROUTES SUPPLÉMENTAIRES (optionnelles)
+# ==========================================
+
+@router.get("/videos/{video_id}/calculate")
+async def calculate_kpi_for_video(video_id: str):
+    """
+    Route de compatibilité pour calcul KPI d'une vidéo
+    NOTE: Le calcul se fait maintenant côté frontend
+    """
+    logger.warning(f"⚠️ Route dépréciée appelée: /videos/{video_id}/calculate")
+    
+    # Chercher si un KPI existe déjà pour cette vidéo
+    try:
+        kpi = await kpis_collection.find_one(
+            {"video_analysis_id": video_id},
+            sort=[("created_at", -1)]
+        )
         
-        kpi = await KPIService.calculate_kpi_for_video(video_id, periode=periode)
-        
-        kpi_dict = kpi.model_dump(by_alias=True, exclude_none=True, exclude={"id", "created_at"})
-        
-        response = {
-            "success": True,
-            "data": kpi_dict,
-            "message": f"KPI {periode} calculé et sauvegardé avec succès"
-        }
-        
-        logger.info(f"✅ KPI {periode} calculé pour vidéo {video_id}")
-        return response
-        
-    except ValueError as e:
-        logger.error(f"❌ Erreur vidéo : {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
+        if kpi:
+            kpi["_id"] = str(kpi["_id"])
+            return {
+                "data": kpi,
+                "message": "KPI récupéré depuis la base de données",
+                "note": "Le calcul KPI se fait maintenant côté frontend"
+            }
+        else:
+            return {
+                "data": None,
+                "message": "Aucun KPI trouvé pour cette vidéo",
+                "note": "Rechargez le dashboard frontend pour calculer les KPIs"
+            }
+            
     except Exception as e:
-        logger.error(f"❌ Erreur calcul KPI : {str(e)}")
+        logger.error(f"❌ Erreur récupération KPI vidéo: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/production/trend", response_model=dict)
-async def get_production_trend(
-    days: int = Query(7, ge=1, le=90, description="Nombre de jours"),
-    periode: Literal["heure", "jour", "semaine", "mois"] = Query(
-        "jour",
-        description="Type de période"
-    )
-):
-    """
-    Obtenir la tendance de production
-    
-    Args:
-        days: Nombre de jours pour la tendance
-        periode: Type de période (heure/jour/semaine/mois)
-    
-    Returns: Données de tendance production
-    """
+@router.get("/all")
+async def get_all_kpis(limit: int = 50, skip: int = 0):
+    """Récupère tous les KPIs avec pagination"""
     try:
-        logger.info(f"📊 Requête tendance production ({periode}) : {days} jours")
+        kpis = await kpis_collection.find().sort(
+            "created_at", -1
+        ).skip(skip).limit(limit).to_list(length=limit)
         
-        kpi_list = await KPIService.get_kpi_history(days=days, periode=periode)
+        total = await kpis_collection.count_documents({})
         
-        # Extraire seulement les données de production
-        production_trend = []
-        for kpi in kpi_list:
-            if kpi.production:
-                production_trend.append({
-                    "date": kpi.date.isoformat(),
-                    "periode": kpi.periode,
-                    "unites_produites": kpi.production.unites_produites,
-                    "taux_productivite": kpi.production.taux_productivite,
-                    "taux_conformite": kpi.production.taux_conformite
-                })
+        # Convertir ObjectId en string
+        for kpi in kpis:
+            kpi["_id"] = str(kpi["_id"])
         
-        response = {
-            "success": True,
-            "count": len(production_trend),
-            "data": production_trend
+        return {
+            "data": kpis,
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+            "count": len(kpis)
         }
-        
-        logger.info(f"✅ Tendance production récupérée : {len(production_trend)} points")
-        return response
-        
     except Exception as e:
-        logger.error(f"❌ Erreur tendance production : {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/machines/trs-trend", response_model=dict)
-async def get_trs_trend(
-    days: int = Query(7, ge=1, le=90, description="Nombre de jours"),
-    periode: Literal["heure", "jour", "semaine", "mois"] = Query(
-        "jour",
-        description="Type de période"
-    )
-):
-    """
-    Obtenir la tendance TRS des machines
-    
-    Args:
-        days: Nombre de jours pour la tendance
-        periode: Type de période (heure/jour/semaine/mois)
-    
-    Returns: Données de tendance TRS
-    """
-    try:
-        logger.info(f"📊 Requête tendance TRS ({periode}) : {days} jours")
-        
-        kpi_list = await KPIService.get_kpi_history(days=days, periode=periode)
-        
-        # Extraire seulement les données TRS
-        trs_trend = []
-        for kpi in kpi_list:
-            if kpi.machines:
-                trs_trend.append({
-                    "date": kpi.date.isoformat(),
-                    "periode": kpi.periode,
-                    "trs": kpi.machines.trs,
-                    "disponibilite": kpi.machines.disponibilite,
-                    "performance": kpi.machines.performance,
-                    "qualite": kpi.machines.qualite
-                })
-        
-        response = {
-            "success": True,
-            "count": len(trs_trend),
-            "data": trs_trend
-        }
-        
-        logger.info(f"✅ Tendance TRS récupérée : {len(trs_trend)} points")
-        return response
-        
-    except Exception as e:
-        logger.error(f"❌ Erreur tendance TRS : {str(e)}")
+        logger.error(f"❌ Erreur récupération tous KPIs: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

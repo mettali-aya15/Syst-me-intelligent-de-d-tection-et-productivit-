@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';  // ✅ RouterLink retiré
+import { ActivatedRoute, Router } from '@angular/router';
 import { VideoService } from '../services/video.service';
 import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -8,7 +8,7 @@ import { switchMap } from 'rxjs/operators';
 @Component({
   selector: 'app-video-detail',
   standalone: true,
-  imports: [CommonModule],  // ✅ RouterLink retiré
+  imports: [CommonModule],
   templateUrl: './video-detail.html',
   styleUrls: ['./video-detail.scss']
 })
@@ -23,6 +23,10 @@ export class VideoDetailComponent implements OnInit, OnDestroy {
   error = '';
   
   videoUrl = '';
+  
+  // ✅ AJOUTÉ - Modal employé
+  selectedEmployee: any = null;
+  showEmployeeModal = false;
   
   private pollingSubscription?: Subscription;
 
@@ -39,46 +43,63 @@ export class VideoDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadVideo(videoId: string): void {
-    this.loading = true;
-    
-    this.videoService.getVideo(videoId).subscribe({
-      next: (data: any) => {
-        this.video = data;
-        this.loading = false;
-        
-        console.log('📹 VIDEO COMPLETE:', data);
-        console.log('🎯 model_type =', data.model_type);
-        console.log('🔢 total_detections =', data.total_detections);
-        console.log('📦 unique_objects =', data.unique_objects);
-        console.log('📁 annotated_path =', data.annotated_path);
-        
-        if (data.annotated_path) {
-          this.videoUrl = `http://localhost:8000/api/v1/videos/${videoId}/stream`;
-          console.log('🎥 URL vidéo streaming:', this.videoUrl);
+loadVideo(videoId: string): void {
+  this.loading = true;
+  
+  this.videoService.getVideo(videoId).subscribe({
+    next: (data: any) => {
+      this.video = data;
+      
+      console.log('📹 VIDEO COMPLETE:', data);
+      console.log('🎯 model_type =', data.model_type);
+      console.log('🔢 total_detections =', data.total_detections);
+      console.log('📁 annotated_path =', data.annotated_path);
+
+      // ✅ RÉCUPÉRER classes_detectees depuis video_detections
+      this.videoService.getVideoDetections(data._id).subscribe({
+        next: (detectionData: any) => {
+          const classes = detectionData?.classes_detectees || {};
+          console.log('📦 classes_detectees =', classes);
+          
+          // ✅ ALIMENTER unique_objects pour le template
+          this.video.unique_objects = classes;
+          this.video.classes_detectees = classes;
+          
+          this.loading = false;
+        },
+        error: (err) => {
+          console.error('❌ Erreur détections:', err);
+          this.video.unique_objects = {};
+          this.loading = false;
         }
-        
-        if (data.model_type === 'employees' || data.model_type === 'both') {
-          console.log('✅ Chargement du rapport de présence (model_type = ' + data.model_type + ')');
-          this.loadAttendance(videoId);
-        } else {
-          console.log('⏭️ Pas de rapport de présence (model_type = ' + data.model_type + ')');
-          this.attendanceReport = null;
-        }
-        
-        if (data.status === 'processing' || data.status === 'analyzing') {
-          this.startPolling(videoId);
-        } else {
-          this.stopPolling();
-        }
-      },
-      error: (err: any) => {
-        this.error = 'Erreur lors du chargement de la vidéo';
-        this.loading = false;
-        console.error('❌ Erreur chargement vidéo:', err);
+      });
+
+      if (data.annotated_path) {
+        this.videoUrl = `http://localhost:8000/api/v1/videos/${videoId}/stream`;
+        console.log('🎥 URL vidéo streaming:', this.videoUrl);
       }
-    });
-  }
+      
+      if (data.model_type === 'employees' || data.model_type === 'both') {
+        console.log('✅ Chargement du rapport de présence (model_type = ' + data.model_type + ')');
+        this.loadAttendance(videoId);
+      } else {
+        console.log('⏭️ Pas de rapport de présence (model_type = ' + data.model_type + ')');
+        this.attendanceReport = null;
+      }
+      
+      if (data.status === 'processing' || data.status === 'analyzing') {
+        this.startPolling(videoId);
+      } else {
+        this.stopPolling();
+      }
+    },
+    error: (err: any) => {
+      this.error = 'Erreur lors du chargement de la vidéo';
+      this.loading = false;
+      console.error('❌ Erreur chargement vidéo:', err);
+    }
+  });
+}
 
   loadAttendance(videoId: string): void {
     this.videoService.getAttendance(videoId).subscribe({
@@ -212,6 +233,17 @@ export class VideoDetailComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.router.navigate(['/admin/videos']);
+  }
+
+  // ✅ AJOUTÉ - Méthodes pour le modal employé
+  openEmployeeDetail(employee: any): void {
+    this.selectedEmployee = employee;
+    this.showEmployeeModal = true;
+  }
+
+  closeEmployeeModal(): void {
+    this.showEmployeeModal = false;
+    this.selectedEmployee = null;
   }
 
   objectKeys = Object.keys;

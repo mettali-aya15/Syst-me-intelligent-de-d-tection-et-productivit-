@@ -18,6 +18,8 @@ from .dashboard import router as dashboard_router
 from .alerts import router as alerts_router
 from .reports import router as reports_router
 from .websocket_route import router as websocket_router
+from app.api.v1.routes import notifications
+
 
 
 api_router = APIRouter()
@@ -35,7 +37,11 @@ api_router.include_router(
     prefix="/videos",
     tags=["Vidéos"]
 )
-
+api_router.include_router(
+    notifications.router,
+    prefix="/notifications",
+    tags=["Notifications"]
+)
 # Détections
 api_router.include_router(
     detections_router,

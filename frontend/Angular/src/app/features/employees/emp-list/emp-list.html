@@ -59,9 +59,17 @@
 
   <!-- Liste des employés -->
   <div *ngIf="!loading && !error" class="employees-grid">
-    <div *ngFor="let employee of filteredEmployees" class="employee-card">
+    <div *ngFor="let employee of filteredEmployees" 
+         class="employee-card"
+         (click)="openDetailModal(employee)">
+      
       <div class="employee-avatar">
-        {{ employee.full_name.charAt(0) }}
+        <!-- ✅ AFFICHER L'IMAGE SI ELLE EXISTE -->
+        <img *ngIf="employee.photo_url" 
+             [src]="employee.photo_url" 
+             alt="{{ employee.full_name }}"
+             class="employee-photo" />
+        <span *ngIf="!employee.photo_url">{{ employee.full_name.charAt(0) }}</span>
       </div>
 
       <div class="employee-info">
@@ -87,7 +95,7 @@
         </span>
       </div>
 
-      <div class="employee-actions">
+      <div class="employee-actions" (click)="$event.stopPropagation()">
         <button class="btn-edit" (click)="openEditModal(employee)" title="Modifier">
           ✏️
         </button>
@@ -147,6 +155,34 @@
           />
         </div>
 
+        <!-- ✅ AJOUT DU CHAMP PHOTO -->
+        <div class="form-group">
+          <label>Photo de profil</label>
+          <div class="photo-upload-zone">
+            <input
+              type="file"
+              #fileInput
+              accept="image/jpeg,image/png,image/jpg,image/webp"
+              (change)="onPhotoSelected($event)"
+              style="display: none"
+            />
+            
+            <div *ngIf="!currentEmployee.photo_url" 
+                 class="upload-placeholder"
+                 (click)="fileInput.click()">
+              <span class="upload-icon">📷</span>
+              <p>Cliquer pour ajouter une photo</p>
+            </div>
+
+            <div *ngIf="currentEmployee.photo_url" class="photo-preview">
+              <img [src]="currentEmployee.photo_url" alt="Photo" />
+              <button type="button" class="btn-remove-photo" (click)="removePhoto()">
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Département</label>
           <select [(ngModel)]="currentEmployee.department">
@@ -176,6 +212,60 @@
         </button>
         <button class="btn-primary-modal" (click)="saveEmployee()">
           {{ modalMode === 'create' ? 'Créer' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ MODAL DÉTAILS EMPLOYÉ -->
+  <div *ngIf="showDetailModal" class="modal-overlay" (click)="closeDetailModal()">
+    <div class="modal-detail" (click)="$event.stopPropagation()">
+      <button class="btn-close-detail" (click)="closeDetailModal()">✕</button>
+      
+      <div class="detail-header">
+        <div class="detail-photo">
+          <img *ngIf="selectedEmployee?.photo_url" 
+               [src]="selectedEmployee?.photo_url" 
+               alt="{{ selectedEmployee?.full_name }}" />
+          <div *ngIf="!selectedEmployee?.photo_url" class="detail-avatar">
+            {{ selectedEmployee?.full_name?.charAt(0) }}
+          </div>
+        </div>
+        <div class="detail-name">
+          <h2>{{ selectedEmployee?.full_name }}</h2>
+          <span class="detail-status-badge"
+                [class.active]="selectedEmployee?.active"
+                [class.inactive]="!selectedEmployee?.active">
+            {{ selectedEmployee?.active ? '✓ Actif' : '✗ Inactif' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="detail-body">
+        <div class="detail-row">
+          <span class="detail-label">📛 Nom YOLO</span>
+          <span class="detail-value">{{ selectedEmployee?.name }}</span>
+        </div>
+        
+        <div class="detail-row" *ngIf="selectedEmployee?.email">
+          <span class="detail-label">📧 Email</span>
+          <span class="detail-value">{{ selectedEmployee?.email }}</span>
+        </div>
+        
+        <div class="detail-row" *ngIf="selectedEmployee?.department">
+          <span class="detail-label">🏢 Département</span>
+          <span class="detail-value">{{ selectedEmployee?.department }}</span>
+        </div>
+        
+        <div class="detail-row" *ngIf="selectedEmployee?.created_at">
+          <span class="detail-label">📅 Créé le</span>
+          <span class="detail-value">{{ selectedEmployee?.created_at | date:'dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+
+      <div class="detail-footer">
+        <button class="btn-edit-detail" (click)="openEditFromDetail()">
+          ✏️ Modifier
         </button>
       </div>
     </div>

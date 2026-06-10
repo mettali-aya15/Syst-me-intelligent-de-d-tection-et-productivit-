@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 from bson import ObjectId
 
-from core.database import Database
+from app.core.database import Database
 
 import logging
 logger = logging.getLogger(__name__)
@@ -27,41 +27,35 @@ async def get_video_detections(
     Obtenir les détections d'une vidéo
     
     - **video_id**: ID de la vidéo
-    - **limit**: Nombre maximum de détections
-    - **skip**: Nombre de détections à sauter
+    - **limit**: Nombre maximum de documents
+    - **skip**: Nombre de documents à sauter
     
     Returns:
-        Liste des détections
+        classes_detectees et métadonnées
     """
     try:
         collection = Database.get_collection("video_detections")
         
-        cursor = collection.find(
+        # Récupère LE SEUL document pour cette vidéo
+        detection = await collection.find_one(
             {"video_id": ObjectId(video_id)}
-        ).sort("frame_number", 1).skip(skip).limit(limit)
+        )
         
-        detections = await cursor.to_list(length=limit)
+        if not detection:
+            return {
+                "video_id": video_id,
+                "classes_detectees": {}
+            }
         
         return {
-            "video_id": video_id,
-            "count": len(detections),
-            "detections": [
-                {
-                    "frame_number": det["frame_number"],
-                    "timestamp": det["timestamp"],
-                    "class_name": det["class_name"],
-                    "confidence": det["confidence"],
-                    "bbox": det["bbox"],
-                    "source": det["source"]
-                }
-                for det in detections
-            ]
+            "video_id": str(detection.get("video_id", "")),
+            "classes_detectees": detection.get("classes_detectees", {}),
+            "processed_at": detection.get("processed_at")
         }
     
     except Exception as e:
-        logger.error(f"❌ Erreur récupération détections : {e}")
+        logger.error(f"❌ Erreur: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/video/{video_id}/summary")
 async def get_detections_summary(video_id: str):

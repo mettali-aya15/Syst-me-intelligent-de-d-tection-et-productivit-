@@ -47,7 +47,6 @@ class VideoUpload(BaseModel):
     model_type: str = Field(default="both", description="Type de modèle: objects, employees, ou both")  # ✅ AJOUTÉ
     confidence: float = Field(default=0.3, description="Seuil de confiance pour la détection")  # ✅ AJOUTÉ
     total_detections: Optional[int] = None
-    summary: Optional[dict] = None              # Total détections par classe
     unique_objects: Optional[dict] = None       # Objets uniques
     uploaded_at: datetime = Field(default_factory=datetime.now)
     processed_at: Optional[datetime] = None

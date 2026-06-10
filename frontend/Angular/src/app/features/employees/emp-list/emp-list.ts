@@ -32,6 +32,10 @@ export class EmpListComponent implements OnInit {
   modalMode: 'create' | 'edit' = 'create';
   currentEmployee: Partial<Employee> = {};
 
+  // ✅ AJOUTÉ POUR LA CARD DÉTAILLÉE
+  showDetailModal = false;
+  selectedEmployee: Employee | null = null;
+
   constructor(private employeeService: EmployeeService) {}
 
   ngOnInit(): void {
@@ -162,5 +166,54 @@ export class EmpListComponent implements OnInit {
     if (confirm(`Êtes-vous sûr de vouloir désactiver ${employee.full_name} ?`)) {
       this.toggleStatus(employee);
     }
+  }
+
+  // ✅ NOUVELLES MÉTHODES POUR LA CARD DÉTAILLÉE
+  openDetailModal(employee: Employee): void {
+    this.selectedEmployee = employee;
+    this.showDetailModal = true;
+  }
+
+  closeDetailModal(): void {
+    this.showDetailModal = false;
+    this.selectedEmployee = null;
+  }
+
+  openEditFromDetail(): void {
+    if (this.selectedEmployee) {
+      this.closeDetailModal();
+      this.openEditModal(this.selectedEmployee);
+    }
+  }
+
+  // ✅ NOUVELLE MÉTHODE POUR L'UPLOAD D'IMAGE (BASE64)
+  onPhotoSelected(event: any): void {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Vérifier le type
+    if (!file.type.match('image.*')) {
+      alert('Veuillez sélectionner une image');
+      return;
+    }
+
+    // Vérifier la taille (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image trop volumineuse (max 2MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    
+    reader.onload = (e: any) => {
+      // Stocker directement en Base64
+      this.currentEmployee.photo_url = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  removePhoto(): void {
+    this.currentEmployee.photo_url = undefined;
   }
 }

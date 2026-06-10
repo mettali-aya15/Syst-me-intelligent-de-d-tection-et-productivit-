@@ -6,7 +6,7 @@ Modèles Pydantic pour les alertes
 
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 from enum import Enum
 from bson import ObjectId
 
@@ -23,11 +23,13 @@ class AlertCreate(BaseModel):
     """Données pour créer une alerte"""
     alert_type: str
     severity: AlertSeverity
+    title: str  # ✅ AJOUTÉ
     message: str
     machine_id: Optional[str] = None
     employee_id: Optional[str] = None
+    video_id: Optional[str] = None  # ✅ AJOUTÉ
     event_id: Optional[str] = None
-    metadata: Optional[dict] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class Alert(BaseModel):
@@ -37,12 +39,15 @@ class Alert(BaseModel):
     id: Optional[ObjectId] = Field(default=None, alias="_id")
     alert_type: str
     severity: AlertSeverity
+    title: str  # ✅ AJOUTÉ
     message: str
     machine_id: Optional[str] = None
     employee_id: Optional[str] = None
+    video_id: Optional[str] = None  # ✅ AJOUTÉ
     event_id: Optional[str] = None
-    metadata: Optional[dict] = None
+    metadata: Optional[Dict[str, Any]] = None
     is_resolved: bool = False
     resolved_by: Optional[str] = None
     resolved_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)  # ✅ AJOUTÉ

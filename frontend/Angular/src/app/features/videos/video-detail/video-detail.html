@@ -161,55 +161,6 @@
             </div>
           }
 
-          <!-- RAPPORT DE PRÉSENCE (SI EMPLOYEES) -->
-          @if (attendanceReport && (video.model_type === 'employees' || video.model_type === 'both')) {
-            <div class="attendance-card">
-              <div class="card-header">
-                <h3>👥 Rapport de Présence</h3>
-              </div>
-              
-              <div class="attendance-summary">
-                <div class="attendance-circle" [style.borderColor]="getAttendanceColor()">
-                  <span class="attendance-percent">{{ attendanceReport.attendance_rate }}%</span>
-                  <span class="attendance-label">Présence</span>
-                </div>
-              </div>
-
-              <div class="attendance-stats">
-                <div class="stat-row">
-                  <span class="stat-label">Employés détectés</span>
-                  <span class="stat-value">{{ attendanceReport.total_employees }}</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-label">Présents</span>
-                  <span class="stat-value success">{{ attendanceReport.present_count }}</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-label">Absents</span>
-                  <span class="stat-value danger">{{ attendanceReport.absent_count }}</span>
-                </div>
-              </div>
-
-              @if (attendanceReport.employees && attendanceReport.employees.length > 0) {
-                <div class="employee-list">
-                  <h4>Liste des employés</h4>
-                  @for (emp of attendanceReport.employees; track emp.name) {
-                    <div class="employee-row" [class.present]="emp.status === 'present'" [class.absent]="emp.status === 'absent'">
-                      <span class="emp-name">{{ emp.name }}</span>
-                      <span class="emp-status">
-                        @if (emp.status === 'present') {
-                          <i class="fas fa-check-circle"></i> Présent
-                        } @else {
-                          <i class="fas fa-times-circle"></i> Absent
-                        }
-                      </span>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          }
-
           <!-- PROCESSING STATE -->
           @if (video.status === 'processing' || video.status === 'analyzing') {
             <div class="processing-card">
@@ -253,6 +204,141 @@
             </div>
           }
 
+        </div>
+      </div>
+
+      <!-- ✅ RAPPORT DE PRÉSENCE EN PLEINE LARGEUR (DÉPLACÉ ICI) -->
+      @if (attendanceReport && (video.model_type === 'employees' || video.model_type === 'both')) {
+        <div class="attendance-card">
+          <div class="card-header">
+            <h3>👥 Rapport de Présence</h3>
+          </div>
+          
+          <!-- WRAPPER HORIZONTAL -->
+          <div class="attendance-content-wrapper">
+            
+            <!-- GAUCHE : Cercle + Stats -->
+            <div class="attendance-left">
+              <div class="attendance-summary">
+                <div class="attendance-circle" [style.borderColor]="getAttendanceColor()">
+                  <span class="attendance-percent">{{ attendanceReport.attendance_rate }}%</span>
+                  <span class="attendance-label">Présence</span>
+                </div>
+              </div>
+
+              <div class="attendance-stats">
+                <div class="stat-row">
+                  <span class="stat-label">Total employés</span>
+                  <span class="stat-value">{{ attendanceReport.total_employees }}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Présents</span>
+                  <span class="stat-value success">{{ attendanceReport.present_count }}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Absents</span>
+                  <span class="stat-value danger">{{ attendanceReport.absent_count }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DROITE : Listes employés (2 colonnes) -->
+            <div class="attendance-right">
+              
+              <!-- LISTE DES PRÉSENTS -->
+              @if (attendanceReport.present && attendanceReport.present.length > 0) {
+                <div class="employee-section">
+                  <h4>✅ Employés présents ({{ attendanceReport.present_count }})</h4>
+                  <div class="employee-list">
+                    @for (emp of attendanceReport.present; track emp.id) {
+                      <div class="employee-row present" (click)="openEmployeeDetail(emp)">
+                        <div class="emp-avatar">
+                          @if (emp.photo_url) {
+                            <img [src]="emp.photo_url" alt="{{ emp.full_name }}" />
+                          } @else {
+                            <span>{{ emp.full_name.charAt(0) }}</span>
+                          }
+                        </div>
+                        <div class="emp-info">
+                          <span class="emp-name">{{ emp.full_name }}</span>
+                          <span class="emp-dept" *ngIf="emp.department">{{ emp.department }}</span>
+                        </div>
+                        <i class="fas fa-check-circle emp-icon"></i>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- LISTE DES ABSENTS -->
+              @if (attendanceReport.absent && attendanceReport.absent.length > 0) {
+                <div class="employee-section">
+                  <h4>❌ Employés absents ({{ attendanceReport.absent_count }})</h4>
+                  <div class="employee-list">
+                    @for (emp of attendanceReport.absent; track emp.id) {
+                      <div class="employee-row absent" (click)="openEmployeeDetail(emp)">
+                        <div class="emp-avatar">
+                          @if (emp.photo_url) {
+                            <img [src]="emp.photo_url" alt="{{ emp.full_name }}" />
+                          } @else {
+                            <span>{{ emp.full_name.charAt(0) }}</span>
+                          }
+                        </div>
+                        <div class="emp-info">
+                          <span class="emp-name">{{ emp.full_name }}</span>
+                          <span class="emp-dept" *ngIf="emp.department">{{ emp.department }}</span>
+                        </div>
+                        <i class="fas fa-times-circle emp-icon"></i>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+              
+            </div>
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ✅ MODAL DÉTAILS EMPLOYÉ -->
+  @if (showEmployeeModal && selectedEmployee) {
+    <div class="modal-overlay" (click)="closeEmployeeModal()">
+      <div class="modal-employee" (click)="$event.stopPropagation()">
+        <button class="btn-close-modal" (click)="closeEmployeeModal()">✕</button>
+        
+        <div class="modal-header-emp">
+          <div class="modal-photo">
+            @if (selectedEmployee.photo_url) {
+              <img [src]="selectedEmployee.photo_url" alt="{{ selectedEmployee.full_name }}" />
+            } @else {
+              <div class="modal-avatar">{{ selectedEmployee.full_name.charAt(0) }}</div>
+            }
+          </div>
+          <h2>{{ selectedEmployee.full_name }}</h2>
+        </div>
+
+        <div class="modal-body-emp">
+          <div class="modal-row">
+            <span class="modal-label">📛 Nom YOLO</span>
+            <span class="modal-value">{{ selectedEmployee.name }}</span>
+          </div>
+          
+          @if (selectedEmployee.email) {
+            <div class="modal-row">
+              <span class="modal-label">📧 Email</span>
+              <span class="modal-value">{{ selectedEmployee.email }}</span>
+            </div>
+          }
+          
+          @if (selectedEmployee.department) {
+            <div class="modal-row">
+              <span class="modal-label">🏢 Département</span>
+              <span class="modal-value">{{ selectedEmployee.department }}</span>
+            </div>
+          }
         </div>
       </div>
     </div>
